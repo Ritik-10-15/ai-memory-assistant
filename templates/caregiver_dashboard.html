@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caregiver Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#f8f7f4;color:#1a1a1a;min-height:100vh}
+nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  position:sticky;top:0;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+nav h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav-links a,.nav-links button{padding:7px 14px;border-radius:8px;font-size:13px;
+  text-decoration:none;color:#374151;border:1px solid #e5e7eb;
+  background:#fff;cursor:pointer;font-family:inherit;font-weight:500}
+.nav-links a:hover,.nav-links button:hover{background:#f3f4f6}
+.nav-links a.primary{background:#16a34a;color:#fff;border-color:#16a34a}
+main{max-width:1200px;margin:0 auto;padding:28px 24px;display:flex;flex-direction:column;gap:24px}
+.flash{background:#dcfce7;color:#166534;border-radius:10px;padding:12px 16px;font-size:14px}
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.stat{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px}
+.stat .val{font-size:30px;font-weight:800;color:#16a34a}
+.stat .lbl{font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+/* People grid */
+section{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:24px}
+h2{font-size:16px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+h2 span{font-size:13px;font-weight:400;color:#9ca3af}
+.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.p-card{border:1px solid #e5e7eb;border-radius:12px;padding:16px;
+  display:flex;flex-direction:column;gap:6px;transition:border-color .2s}
+.p-card:hover{border-color:#16a34a}
+.p-card strong{font-size:15px}
+.p-card .rel{font-size:13px;color:#6b7280}
+.p-card .note{font-size:12px;color:#9ca3af;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.p-actions{display:flex;gap:6px;margin-top:8px}
+.p-actions a{flex:1;text-align:center;padding:6px;border-radius:8px;
+  font-size:12px;font-weight:600;text-decoration:none;border:1px solid #e5e7eb;
+  color:#374151;background:#f9fafb;transition:background .15s}
+.p-actions a:hover{background:#f3f4f6}
+.p-actions a.enroll{color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}
+.p-actions a.del{color:#b91c1c;border-color:#fecaca;background:#fff}
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:#9ca3af;font-size:11px;text-transform:uppercase;
+  letter-spacing:.06em;padding:0 0 10px;border-bottom:1px solid #e5e7eb;font-weight:600}
+td{padding:10px 0;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:middle}
+tr:last-child td{border:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.badge.happy,.badge.surprised{background:#dcfce7;color:#166534}
+.badge.sad,.badge.fearful{background:#dbeafe;color:#1e40af}
+.badge.angry,.badge.disgusted{background:#fee2e2;color:#b91c1c}
+.badge.neutral{background:#f3f4f6;color:#374151}
+.empty{text-align:center;padding:32px;color:#9ca3af;font-size:14px}
+</style>
+</head>
+<body>
+<nav>
+  <h1>🩺 Caregiver Panel</h1>
+  <div class="nav-links">
+    <a href="/caregiver/analytics">📊 Analytics</a>
+    <a href="/caregiver/export/csv">⬇ Export CSV</a>
+    <a href="/caregiver/people/add" class="primary">+ Add person</a>
+    <a href="/">Patient view</a>
+    <a href="/caregiver/logout">Sign out</a>
+  </div>
+</nav>
+<main>
+  {% with msgs=get_flashed_messages() %}{% if msgs %}
+    <div class="flash">{{ msgs[0] }}</div>
+  {% endif %}{% endwith %}
+
+  <!-- Live stats -->
+  <div class="stats-grid">
+    <div class="stat"><div class="val">{{ people|length }}</div><div class="lbl">People registered</div></div>
+    <div class="stat"><div class="val" id="live-today">–</div><div class="lbl">Visits today</div></div>
+    <div class="stat"><div class="val" id="live-total">–</div><div class="lbl">Total visits</div></div>
+    <div class="stat"><div class="val" id="live-mem">–</div><div class="lbl">Memories saved</div></div>
+    {% if unseen > 0 %}
+    <div class="stat" style="border-color:#fca5a5">
+      <div class="val" style="color:#dc2626">{{ unseen }}</div>
+      <div class="lbl">Unseen alerts</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- People -->
+  <section>
+    <h2>Registered people <span>{{ people|length }} total</span></h2>
+    {% if people %}
+    <div class="people-grid">
+      {% for p in people %}
+      <div class="p-card">
+        <strong>{{ p.name }}</strong>
+        <div class="rel">{{ p.relationship or "No relationship set" }}</div>
+        {% if p.notes %}<div class="note">{{ p.notes }}</div>{% endif %}
+        <div class="p-actions">
+          <a href="/caregiver/people/{{ p.id }}/edit">Edit</a>
+          <a href="/caregiver/enroll/{{ p.id }}" class="enroll">📷 Enroll</a>
+          <form method="POST" action="/caregiver/people/{{ p.id }}/delete"
+                onsubmit="return confirm('Delete {{ p.name }}?')">
+            <a href="#" onclick="this.closest('form').submit()" class="del">Delete</a>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No people yet. <a href="/caregiver/people/add"
+      style="color:#16a34a;text-decoration:none">Add the first person →</a></div>
+    {% endif %}
+  </section>
+
+  <!-- Recent visits -->
+  <section>
+    <h2>Recent visits <span>last 25</span></h2>
+    {% if visits %}
+    <table>
+      <thead><tr>
+        <th>Person</th><th>Date & time</th>
+        <th>Duration</th><th>Emotion</th><th>Confidence</th>
+      </tr></thead>
+      <tbody>
+        {% for v in visits %}
+        <tr>
+          <td><strong>{{ v.name }}</strong></td>
+          <td>{{ v.started_at }}</td>
+          <td>{% if v.duration_s %}{{ v.duration_s }}s{% else %}–{% endif %}</td>
+          <td>{% if v.emotion %}
+            <span class="badge {{ v.emotion }}">{{ v.emotion }}</span>
+          {% else %}–{% endif %}</td>
+          <td>{{ "%.0f%%"|format((v.confidence or 0)*100) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">No visits recorded yet.</div>
+    {% endif %}
+  </section>
+</main>
+
+<script>
+async function loadStats() {
+  try {
+    const s = await fetch("/api/stats").then(r=>r.json());
+    document.getElementById("live-today").textContent = s.today_visits;
+    document.getElementById("live-total").textContent = s.total_visits;
+    document.getElementById("live-mem").textContent   = s.total_memories;
+  } catch(e) {}
+}
+loadStats(); setInterval(loadStats, 10000);
+</script>
+</body>
+</html>

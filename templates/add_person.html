@@ -1,0 +1,88 @@
+<!-- add_person.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add Person</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8f7f4;color:#1a1a1a}
+nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 28px;display:flex;align-items:center;gap:14px}
+nav a{font-size:14px;color:#6b7280;text-decoration:none}
+nav h1{font-size:18px;font-weight:700}
+main{max-width:640px;margin:0 auto;padding:32px 24px;display:flex;flex-direction:column;gap:20px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:26px}
+h2{font-size:17px;font-weight:700;margin-bottom:20px}
+label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
+input[type="text"],input[type="date"],textarea,input[type="password"]{
+  width:100%;border:1px solid #e5e7eb;border-radius:9px;padding:10px 12px;
+  font-size:15px;font-family:inherit;outline:none;color:#1a1a1a;
+  background:#fff;margin-bottom:16px;transition:border-color .15s}
+input:focus,textarea:focus{border-color:#16a34a}
+textarea{min-height:80px;resize:vertical}
+.upload-area{border:2px dashed #e5e7eb;border-radius:10px;padding:20px;
+  text-align:center;cursor:pointer;font-size:14px;color:#6b7280;
+  transition:border-color .15s;margin-bottom:10px}
+.upload-area:hover{border-color:#16a34a}
+.preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.preview img{width:68px;height:68px;object-fit:cover;border-radius:8px;border:2px solid #16a34a}
+.btn-row{display:flex;gap:10px}
+button,.btn{flex:1;padding:12px;border-radius:10px;font-size:15px;
+  font-weight:700;cursor:pointer;border:none;text-align:center;text-decoration:none;display:inline-block}
+.btn-green{background:#16a34a;color:#fff}
+.btn-gray{background:#f3f4f6;color:#374151;border:1px solid #e5e7eb}
+.hint{font-size:12px;color:#9ca3af;margin-top:-12px;margin-bottom:16px}
+.flash{background:#fee2e2;color:#b91c1c;border-radius:10px;padding:10px 14px;font-size:14px}
+</style>
+</head>
+<body>
+<nav><a href="/caregiver">← Dashboard</a><h1>Add a person</h1></nav>
+<main>
+{% with msgs=get_flashed_messages() %}{% if msgs %}<div class="flash">{{ msgs[0] }}</div>{% endif %}{% endwith %}
+<form method="POST" enctype="multipart/form-data">
+  <div class="card">
+    <h2>Personal details</h2>
+    <label>Full name *</label>
+    <input type="text" name="name" placeholder="e.g. Sarah Johnson" required autofocus>
+    <label>Relationship to patient</label>
+    <input type="text" name="relationship" placeholder="e.g. Daughter, Doctor, Neighbour">
+    <label>Date of birth</label>
+    <input type="date" name="dob">
+    <label>Notes (shown on recognition)</label>
+    <textarea name="notes" placeholder="e.g. Visits every Sunday. Loves talking about gardening."></textarea>
+    <label>Custom greeting (spoken aloud on recognition)</label>
+    <input type="text" name="tts_greeting" placeholder="e.g. Hello! Your daughter Sarah is here.">
+    <div class="hint">Leave blank for automatic greeting.</div>
+  </div>
+  <div class="card">
+    <h2>Face photos</h2>
+    <p style="font-size:14px;color:#6b7280;margin-bottom:16px">
+      Upload 10–20 clear photos of the person's face. Different angles and lighting improve accuracy.
+      Or use the <strong>Live Enroll</strong> feature after saving.
+    </p>
+    <div class="upload-area" onclick="document.getElementById('photo-input').click()">
+      Click to upload photos (JPG, PNG)
+    </div>
+    <input type="file" id="photo-input" name="photos" multiple accept="image/*"
+           style="display:none" onchange="preview(this)">
+    <div class="preview" id="preview"></div>
+  </div>
+  <div class="btn-row">
+    <a href="/caregiver" class="btn btn-gray">Cancel</a>
+    <button type="submit" class="btn btn-green">Add person</button>
+  </div>
+</form>
+</main>
+<script>
+function preview(input) {
+  const p = document.getElementById("preview");
+  p.innerHTML = "";
+  Array.from(input.files).forEach(f => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(f);
+    p.appendChild(img);
+  });
+}
+</script>
+</body>
+</html>

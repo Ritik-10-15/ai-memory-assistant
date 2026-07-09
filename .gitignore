@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Secrets / config
+.env
+
+# Databases (contain personal memory data)
+memory_v2.db
+memory_v2.db.backup
+memory.db
+*.db-wal
+*.db-shm
+
+# Downloaded models (fetched via download_models.py, ~38 MB)
+models/
+
+# Enrolled face photos (biometric / personal data — keep private)
+known_faces/
+
+# Uploaded audio + generated caches
+uploads/
+gallery_cache.npz
+
+# Abandoned experiments / scratch
+face_engine.cpp
+cpp_bridge.py
+inspect_db.py
+
+# OS / editor
+.DS_Store
+.vscode/
+Thumbs.db
+# FFmpeg binaries (installed separately, not part of the repo)
+ffmpeg.exe
+ffplay.exe
+ffprobe.exe
+
+# VS Code Code Runner temp file
+tempCodeRunnerFile.py

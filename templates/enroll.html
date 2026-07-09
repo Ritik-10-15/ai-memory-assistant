@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enroll — {{ person.name }}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8f7f4;color:#1a1a1a}
+nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 28px;display:flex;align-items:center;gap:14px}
+nav a{font-size:14px;color:#6b7280;text-decoration:none}
+nav a:hover{color:#111}
+nav h1{font-size:18px;font-weight:700}
+main{max-width:680px;margin:0 auto;padding:32px 24px;display:flex;flex-direction:column;gap:20px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:28px}
+h2{font-size:18px;font-weight:700;margin-bottom:8px}
+.sub{font-size:14px;color:#6b7280;margin-bottom:24px;line-height:1.6}
+#server-feed{width:100%;border-radius:12px;background:#111;display:block;aspect-ratio:4/3;object-fit:cover}
+#progress-wrap{margin-top:16px}
+#progress-bg{height:10px;background:#e5e7eb;border-radius:5px;overflow:hidden}
+#progress-fill{height:100%;width:0;background:#16a34a;border-radius:5px;transition:width .3s}
+#progress-label{font-size:14px;color:#374151;margin-top:8px;text-align:center;font-weight:500}
+.btn-row{display:flex;gap:10px;margin-top:18px}
+button{flex:1;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s}
+#btn-start{background:#16a34a;color:#fff}
+#btn-start:disabled{opacity:.5;cursor:not-allowed}
+#btn-stop{background:#f3f4f6;color:#374151;display:none}
+#status{font-size:14px;color:#6b7280;text-align:center;margin-top:12px;min-height:20px}
+#status.success{color:#16a34a;font-weight:600}
+#status.error{color:#dc2626}
+#done-section{display:none;text-align:center;padding:24px}
+#done-section .check{font-size:56px;margin-bottom:12px}
+#done-section h3{font-size:22px;font-weight:700;color:#16a34a}
+#done-section p{font-size:15px;color:#6b7280;margin-top:8px;line-height:1.6}
+.back-btn{display:inline-block;margin-top:20px;padding:12px 28px;background:#16a34a;color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px}
+.tips{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:20px}
+.tips h3{font-size:13px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.tips ul{font-size:13px;color:#166534;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/caregiver">← Dashboard</a>
+  <h1>Enroll face — {{ person.name }}</h1>
+</nav>
+<main>
+  <div class="card">
+    <h2>Automatic face capture</h2>
+    <p class="sub">
+      The system uses the server camera — no browser permission needed.
+      Click <strong>Start</strong>, look at the camera, slowly turn your head
+      left and right. It captures 20 photos automatically.
+    </p>
+    <div class="tips">
+      <h3>Tips for best results</h3>
+      <ul>
+        <li>Good lighting on your face</li>
+        <li>Look straight first, then slowly turn left and right</li>
+        <li>Try different expressions — neutral, smile, talking</li>
+        <li>Stay 50–80cm from camera</li>
+      </ul>
+    </div>
+    <img id="server-feed" src="/video" alt="Camera feed">
+    <div id="progress-wrap">
+      <div id="progress-bg"><div id="progress-fill"></div></div>
+      <div id="progress-label">0 / 20 photos captured</div>
+    </div>
+    <div class="btn-row">
+      <button id="btn-start" onclick="startCapture()">▶ Start capture</button>
+      <button id="btn-stop"  onclick="stopCapture()">⏹ Stop</button>
+    </div>
+    <div id="status">Press Start to begin.</div>
+  </div>
+
+  <div class="card" id="done-section">
+    <div class="check">✅</div>
+    <h3>Enrollment complete!</h3>
+    <p>
+      <span id="final-count">20</span> photos captured.<br>
+      Face recognition reloading — <strong>{{ person.name }}</strong> will now be recognized much better.
+    </p>
+    <a href="/caregiver" class="back-btn">← Back to dashboard</a>
+  </div>
+</main>
+
+<script>
+const PID    = "{{ person.id }}";
+const TARGET = 20;
+let interval = null;
+let captured = 0;
+let running  = false;
+
+function startCapture() {
+  if (running) return;
+  running = true;
+  document.getElementById("btn-start").style.display = "none";
+  document.getElementById("btn-stop").style.display  = "block";
+  setStatus("Capturing… look at camera and slowly move your head.", "");
+  interval = setInterval(captureOne, 800);
+}
+
+async function captureOne() {
+  try {
+    const res  = await fetch(`/caregiver/enroll/${PID}/capture`, {method:"POST"});
+    const data = await res.json();
+    if (data.success) {
+      captured = data.count;
+      const pct = Math.min(100, Math.round(captured/TARGET*100));
+      document.getElementById("progress-fill").style.width  = pct + "%";
+      document.getElementById("progress-label").textContent = `${captured} / ${TARGET} photos captured`;
+      setStatus(`Capturing… ${TARGET - captured} more needed.`, "");
+    }
+    if (captured >= TARGET) { stopCapture(); showDone(); }
+  } catch(e) {
+    setStatus("Error — check that the app is running.", "error");
+  }
+}
+
+function stopCapture() {
+  clearInterval(interval);
+  running = false;
+  document.getElementById("btn-start").style.display = "block";
+  document.getElementById("btn-stop").style.display  = "none";
+  if (captured < TARGET)
+    setStatus(`Stopped at ${captured} photos. Click Start to continue.`, "");
+}
+
+function showDone() {
+  document.getElementById("done-section").style.display = "block";
+  document.getElementById("final-count").textContent    = captured;
+  document.getElementById("btn-start").disabled         = true;
+  setStatus("✅ Done!", "success");
+  document.getElementById("done-section").scrollIntoView({behavior:"smooth"});
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className   = cls;
+}
+</script>
+</body>
+</html>
