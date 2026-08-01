@@ -182,6 +182,15 @@ values printed to the console.
 - This is a prototype and assistive aid, not a medical device.
 
 ---
+## Roadmap
+
+- Scale beyond one machine — cameras as edge clients streaming to a central service, behind a production WSGI server.
+- Vector database for the gallery — FAISS for fast nearest-neighbor matching as enrolled people grow.
+- PostgreSQL — replace SQLite for concurrent multi-user access.
+- Automated tests + CI — unit tests for the recognition state machine and database layer, run via GitHub Actions.
+- Modular refactor — split the app into recognition, database, routes, and services modules.
+- Multi-face support — detect and identify several people per frame.
+- Docker — containerize for reproducible deployment.
 
 ## License
 
