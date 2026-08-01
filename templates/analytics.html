@@ -105,14 +105,17 @@ tr:last-child td{border:none}
 const COLORS = ["#16a34a","#2563eb","#d97706","#dc2626","#7c3aed","#0891b2","#be185d","#059669"];
 
 // People chart
+// People chart
+const peopleData = [{% for r in visit_counts %}{{ r.cnt }}{% if not loop.last %},{% endif %}{% endfor %}];
+const peopleLabels = [{% for r in visit_counts %}"{{ r.name }}"{% if not loop.last %},{% endif %}{% endfor %}];
 new Chart(document.getElementById("c-people"),{
   type:"bar",
   data:{
-    labels:[{% for r in visit_counts %}"{{ r.name }}"{% if not loop.last %},{% endif %}{% endfor %}],
+    labels: peopleLabels,
     datasets:[{
-      data:[{% for r in visit_counts %}{{ r.cnt }}{% if not loop.last %},{% endif %}{% endfor %}],
-      backgroundColor: [{% for r in visit_counts %}"{{ COLORS[loop.index0 % 8] }}bb"{% if not loop.last %},{% endif %}{% endfor %}],
-      borderColor: [{% for r in visit_counts %}"{{ COLORS[loop.index0 % 8] }}"{% if not loop.last %},{% endif %}{% endfor %}],
+      data: peopleData,
+      backgroundColor: peopleData.map((_,i) => COLORS[i % 8] + "bb"),
+      borderColor: peopleData.map((_,i) => COLORS[i % 8]),
       borderWidth:1.5,borderRadius:6
     }]
   },

@@ -309,35 +309,78 @@ def recognize(bgr, face_row):
 
 # ── VISIT TRACKER (unchanged) ──────────────────────────────────
 class VisitTracker:
+    """
+    Session-based visit logging.
+
+    A "visit" represents one continuous presence, not one recognition frame.
+    - A visit opens when a person is confidently recognized.
+    - It stays open while they keep being seen.
+    - Brief gaps (looking away, a low-confidence frame) do NOT close it —
+      the visit persists through a cooldown window (VISIT_COOLDOWN_S).
+    - Only after the person is gone longer than the cooldown does the visit
+      close. A fresh appearance after that is a NEW visit.
+
+    This stops the log from filling with hundreds of duplicate "visits" for
+    one person who simply moved around in front of the camera.
+    """
+    VISIT_COOLDOWN_S = 30  # seconds a visit stays open after last sighting
+
     def __init__(self):
-        self._visit_id=None; self._person_id=None
-        self._start=None; self._lock=threading.Lock()
+        self._visit_id   = None
+        self._person_id  = None
+        self._start      = None
+        self._last_seen  = None
+        self._lock       = threading.Lock()
 
     def seen(self, pid, conf, emotion=None):
+        """Call on a CONFIDENT recognition. Opens a visit if none is active
+        for this person, or refreshes the existing one."""
         with self._lock:
-            if self._person_id == pid: return
-            self._close()
-            if not pid: return
+            now = time.time()
+
+            # Same person still around -> refresh, keep visit open. No new row.
+            if self._person_id == pid and self._visit_id is not None:
+                self._last_seen = now
+                return
+
+            # A different person appeared -> close old visit, open new one.
+            if self._person_id is not None and self._person_id != pid:
+                self._close()
+
+            if not pid:
+                return
+
             with get_db() as c:
                 cur = c.execute(
                     "INSERT INTO visits (person_id,confidence,emotion) VALUES(?,?,?)",
                     (pid, conf, emotion))
-                self._visit_id=cur.lastrowid
-                self._person_id=pid
-                self._start=time.time()
+                self._visit_id  = cur.lastrowid
+                self._person_id = pid
+                self._start     = now
+                self._last_seen = now
             if TTS: self._greet(pid)
 
+    def tick(self):
+        """Call every frame. Closes the active visit once the person has been
+        gone longer than the cooldown window."""
+        with self._lock:
+            if self._visit_id is None or self._last_seen is None:
+                return
+            if time.time() - self._last_seen > self.VISIT_COOLDOWN_S:
+                self._close()
+
     def gone(self):
-        with self._lock: self._close()
+        """No face this frame. Does NOT immediately close — cooldown decides."""
+        pass
 
     def _close(self):
         if self._visit_id and self._start:
-            dur = int(time.time()-self._start)
+            dur = int((self._last_seen or time.time()) - self._start)
             with get_db() as c:
                 c.execute(
                     "UPDATE visits SET ended_at=CURRENT_TIMESTAMP,duration_s=? WHERE id=?",
                     (dur, self._visit_id))
-        self._visit_id=self._person_id=self._start=None
+        self._visit_id = self._person_id = self._start = self._last_seen = None
 
     def _greet(self, pid):
         with get_db() as c:
@@ -350,9 +393,8 @@ class VisitTracker:
             try: _tts_engine.say(msg); _tts_engine.runAndWait()
             except: pass
         threading.Thread(target=_speak, daemon=True).start()
-
 _visit_tracker = VisitTracker()
-
+        
 # ── RECOGNITION WORKER ─────────────────────────────────────────
 _frame_q      = queue.Queue(maxsize=FRAME_QUEUE_SIZE)
 _score_buffer = deque(maxlen=SMOOTH_WINDOW)
@@ -440,9 +482,12 @@ def _recognition_worker():
         person_data = None
         if pid and state in ("high", "medium"):
             person_data = _get_person_data(pid)
-            _visit_tracker.seen(pid, smooth)
-        else:
-            _visit_tracker.gone()
+            # Only LOG a visit on a confident match. Medium/borderline frames
+            # still show on screen ("Maybe ...?") but don't create records.
+            if state == "high":
+                _visit_tracker.seen(pid, smooth)
+        # Always tick so the cooldown can close a finished visit.
+        _visit_tracker.tick()
 
         with _det_lock:
             _detection.update({
