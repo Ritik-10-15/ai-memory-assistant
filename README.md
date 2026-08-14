@@ -1,5 +1,6 @@
 # AI Memory Assistant for Neurodegenerative Care
 
+![Tests](https://github.com/Ritik-10-15/ai-memory-assistant/actions/workflows/tests.yml/badge.svg)
 A real-time face-recognition memory aid. When someone the patient knows appears
 on camera, the app recognises them and shows **who they are, how they're
 related, and what was talked about last time** — with the option to have that
