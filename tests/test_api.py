@@ -1,11 +1,10 @@
 """
-API route tests using Flask's test client.
-
-No server process, no camera, no models — the test client calls routes
-directly in-process, so this only exercises the app logic (database
-queries, auth, JSON shape), exactly what's safe and fast to run in CI.
+API route tests using Flask's test client — same behavior as before, now
+pointed at worker.detection / worker.det_lock / config.CAREGIVER_PASS
+since that's where this state actually lives after the refactor.
 """
-import app as app_module
+import config
+import worker
 
 
 def test_stats_on_empty_database(client):
@@ -18,9 +17,8 @@ def test_stats_on_empty_database(client):
 
 
 def test_current_person_defaults_to_idle(client):
-    # Force a clean idle state regardless of any leftover module state
-    with app_module._det_lock:
-        app_module._detection.update({
+    with worker.det_lock:
+        worker.detection.update({
             "person_id": None, "name": None, "state": "idle", "confidence": 0.0,
         })
     resp = client.get("/api/current-person")
@@ -31,8 +29,8 @@ def test_current_person_defaults_to_idle(client):
 
 
 def test_current_person_high_state_has_display_message(client):
-    with app_module._det_lock:
-        app_module._detection.update({
+    with worker.det_lock:
+        worker.detection.update({
             "person_id": "p1", "name": "Ritik Gupta", "state": "high",
             "confidence": 0.87,
         })
@@ -44,7 +42,6 @@ def test_current_person_high_state_has_display_message(client):
 
 def test_caregiver_dashboard_requires_login(client):
     resp = client.get("/caregiver", follow_redirects=False)
-    # Not logged in -> redirected to the login page, not the dashboard.
     assert resp.status_code in (301, 302)
     assert "/caregiver/login" in resp.headers.get("Location", "")
 
@@ -58,9 +55,9 @@ def test_caregiver_login_wrong_password_rejected(client):
 
 
 def test_caregiver_login_correct_password_grants_access(client):
-    correct = app_module.CAREGIVER_PASS
     login_resp = client.post(
-        "/caregiver/login", data={"password": correct}, follow_redirects=False
+        "/caregiver/login", data={"password": config.CAREGIVER_PASS},
+        follow_redirects=False,
     )
     assert login_resp.status_code in (301, 302)
 
@@ -77,12 +74,13 @@ def test_save_memory_rejects_empty_summary(client, sample_person):
 
 
 def test_save_memory_succeeds_with_valid_data(client, sample_person):
+    import database
     resp = client.post(
         "/api/save-memory",
         json={"person_id": sample_person, "summary": "Had tea together"},
     )
     assert resp.status_code == 200
-    with app_module.get_db() as c:
+    with database.get_db() as c:
         row = c.execute(
             "SELECT summary FROM memories WHERE person_id=?", (sample_person,)
         ).fetchone()
