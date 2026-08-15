@@ -1,3 +1,6 @@
+<img width="480" height="283" alt="demo" src="https://github.com/user-attachments/assets/d3a0c1cf-fbf1-4649-ab4b-fc01a3b4ee9b" />
+
+
 # AI Memory Assistant for Neurodegenerative Care
 
 ![Tests](https://github.com/Ritik-10-15/ai-memory-assistant/actions/workflows/tests.yml/badge.svg)
