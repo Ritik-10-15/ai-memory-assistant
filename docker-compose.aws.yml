@@ -15,7 +15,7 @@ services:
       retries: 3
 
   caddy:
-    image: caddy:2.10.0-alpine
+    image: caddy:2.11.6-alpine
     env_file: .env.site
     ports:
       - "${HTTP_PORT:-80}:80"
