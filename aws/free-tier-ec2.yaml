@@ -1,0 +1,225 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Single-instance AI Memory Assistant (HTTPS via Caddy + sslip.io) for eligible AWS Free Tier accounts.
+
+Parameters:
+  CaregiverPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 10
+    AllowedPattern: ^[A-Za-z0-9_-]+$
+    Description: Caregiver panel password (letters, digits, - and _ only).
+  PatientPin:
+    Type: String
+    NoEcho: true
+    MinLength: 4
+    AllowedPattern: ^[0-9]+$
+    Description: PIN entered once on the patient's device.
+  GitHubRepoUrl:
+    Type: String
+    Default: https://github.com/Ritik-10-15/ai-memory-assistant.git
+    AllowedPattern: '^https://github[.]com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+([.]git)?$'
+    Description: Public HTTPS GitHub repository containing the deployment files.
+  GitHubBranch:
+    Type: String
+    Default: main
+    AllowedPattern: ^[A-Za-z0-9._/-]+$
+    Description: Branch that contains docker-compose.aws.yml and the application source.
+  LatestArmAmi:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+    Description: Latest Amazon Linux 2023 ARM64 AMI.
+
+Resources:
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref AppInstanceRole
+
+  AppVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.75.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: memory-assistant-free-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: memory-assistant-free-igw
+
+  VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref AppVpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AppVpc
+      CidrBlock: 10.75.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: memory-assistant-free-public
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AppVpc
+      Tags:
+        - Key: Name
+          Value: memory-assistant-free-public
+
+  DefaultInternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VpcGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTP/HTTPS; server administration uses Session Manager.
+      VpcId: !Ref AppVpc
+      SecurityGroupIngress:
+        # Port 80 serves Let's Encrypt validation and redirects to HTTPS.
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: memory-assistant-free-web
+
+  AppInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - DefaultInternetRoute
+      - PublicSubnetRouteTableAssociation
+    Properties:
+      ImageId: !Ref LatestArmAmi
+      InstanceType: t4g.small
+      IamInstanceProfile: !Ref AppInstanceProfile
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: true
+          DeleteOnTermination: true
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !Ref AppSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: memory-assistant-free-demo
+      UserData:
+        Fn::Base64:
+          Fn::Sub: |
+            #!/bin/bash
+            set -euxo pipefail
+            dnf update -y
+            # Amazon Linux 2023 ships curl-minimal, which already provides `curl`.
+            dnf install -y docker git openssl
+            systemctl enable --now docker
+            systemctl enable --now amazon-ssm-agent
+
+            mkdir -p /usr/local/lib/docker/cli-plugins
+            curl -fsSL --retry 5 https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+            chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+            # Compose build needs buildx, which the AL2023 docker package does not include.
+            BUILDX_LATEST_URL="$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/docker/buildx/releases/latest)"
+            BUILDX_VERSION="${!BUILDX_LATEST_URL##*/}"
+            curl -fsSL --retry 5 "https://github.com/docker/buildx/releases/download/${!BUILDX_VERSION}/buildx-${!BUILDX_VERSION}.linux-arm64" -o /usr/local/lib/docker/cli-plugins/docker-buildx
+            chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+
+            if [ ! -f /swapfile ]; then
+              fallocate -l 1G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=1024
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+            fi
+
+            git clone --depth 1 --single-branch --branch '${GitHubBranch}' '${GitHubRepoUrl}' /opt/memory-assistant
+            cd /opt/memory-assistant
+            cat > .env.aws <<EOF
+            CAREGIVER_PASSWORD=${CaregiverPassword}
+            PATIENT_PIN=${PatientPin}
+            SECRET_KEY=$(openssl rand -hex 32)
+            EOF
+            chmod 600 .env.aws
+
+            # Start on every boot so the HTTPS hostname follows the public IP.
+            cat > /etc/systemd/system/memory-assistant.service <<'EOF'
+            [Unit]
+            Description=AI Memory Assistant (docker compose)
+            After=docker.service network-online.target
+            Requires=docker.service
+            Wants=network-online.target
+
+            [Service]
+            Type=oneshot
+            RemainAfterExit=true
+            TimeoutStartSec=0
+            ExecStart=/bin/bash /opt/memory-assistant/aws/start.sh
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+            systemctl daemon-reload
+            systemctl enable --now memory-assistant.service
+
+Outputs:
+  AppUrl:
+    Description: Public HTTPS URL. The IP (and so the hostname) changes if the instance is stopped and started; check the instance's public IP then.
+    Value: !Sub https://${AppInstance.PublicIp}.sslip.io
+  CaregiverUrl:
+    Description: Caregiver panel.
+    Value: !Sub https://${AppInstance.PublicIp}.sslip.io/caregiver
+  InstanceId:
+    Description: EC2 instance ID for administration and cleanup.
+    Value: !Ref AppInstance
+  AdminAccess:
+    Description: Use Systems Manager Session Manager from the EC2 console.
+    Value: Open EC2 Instances, select this instance, choose Connect, then Session Manager.

@@ -24,3 +24,8 @@ models/
 *.exe
 assets/
 tests/
+
+# Deployment secrets and infra files
+.env.*
+aws/
+docker-compose*.yml

@@ -207,6 +207,26 @@ dashboard choose **New → Blueprint**, select this repo, and fill in
 prompted. `SECRET_KEY` is generated for you, and a 1 GB disk is mounted at
 `/data`. Every push to `main` redeploys.
 
+**On AWS (Free Tier, one EC2 instance):** `aws/free-tier-ec2.yaml` creates a
+`t4g.small` that clones this repo and runs `docker-compose.aws.yml` — the app
+plus Caddy, which serves HTTPS with a free Let's Encrypt certificate for
+`<public-ip>.sslip.io` (no domain needed; HTTPS is what lets the browser use
+the camera). Data lives in a Docker volume on the instance's EBS disk.
+
+```bash
+aws cloudformation create-stack --region us-east-2 \
+  --stack-name memory-assistant-free-demo \
+  --template-body file://aws/free-tier-ec2.yaml \
+  --capabilities CAPABILITY_IAM \
+  --parameters ParameterKey=CaregiverPassword,ParameterValue=<password> \
+               ParameterKey=PatientPin,ParameterValue=<pin>
+```
+
+The `AppUrl` stack output is the site. First boot builds the image, so allow
+~10 minutes after `CREATE_COMPLETE`. To ship new code, open a Session Manager
+shell on the instance and run
+`cd /opt/memory-assistant && sudo git pull && sudo bash aws/start.sh`.
+
 Notes for any hosting platform:
 
 - **Mount a persistent volume at `/data`.** Without one, every enrolled

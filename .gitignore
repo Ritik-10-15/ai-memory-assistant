@@ -41,3 +41,6 @@ ffprobe.exe
 
 # VS Code Code Runner temp file
 tempCodeRunnerFile.py
+# Server-side secrets / generated hostname (aws deployment)
+.env.aws
+.env.site
