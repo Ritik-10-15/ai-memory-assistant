@@ -1,0 +1,9 @@
+# Dependencies for the cloud / Docker image (see Dockerfile).
+# Leaves out Whisper (pulls in PyTorch, ~2 GB and several GB of RAM) and
+# pyttsx3 (would speak on the server, not to the patient). The app disables
+# those features gracefully; recall playback still works via the browser.
+opencv-python-headless>=4.8.0
+numpy>=1.24
+Flask>=3.0
+gunicorn>=22.0
+openai>=1.0

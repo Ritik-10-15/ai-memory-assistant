@@ -1,0 +1,24 @@
+# Render Blueprint — Render dashboard → New → Blueprint → pick this repo.
+# Builds the Dockerfile and mounts a persistent disk at /data so enrolled
+# faces, memories and visits survive redeploys (disks need a paid plan).
+services:
+  - type: web
+    name: ai-memory-assistant
+    runtime: docker
+    plan: starter
+    region: oregon
+    healthCheckPath: /healthz
+    autoDeploy: true
+    disk:
+      name: memory-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CAREGIVER_PASSWORD
+        sync: false        # prompted for in the dashboard, never stored in git
+      - key: PATIENT_PIN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

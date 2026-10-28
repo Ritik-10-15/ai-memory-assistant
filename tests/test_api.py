@@ -85,3 +85,50 @@ def test_save_memory_succeeds_with_valid_data(client, sample_person):
             "SELECT summary FROM memories WHERE person_id=?", (sample_person,)
         ).fetchone()
     assert row["summary"] == "Had tea together"
+
+def test_frame_rejects_non_image(client):
+    resp = client.post("/api/frame", data=b"not a jpeg",
+                       content_type="image/jpeg")
+    assert resp.status_code == 400
+
+
+def test_frame_without_face_returns_no_box(client):
+    import cv2
+    import numpy as np
+    ok, buf = cv2.imencode(".jpg", np.zeros((480, 640, 3), np.uint8))
+    resp = client.post("/api/frame", data=buf.tobytes(),
+                       content_type="image/jpeg")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["box"] is None
+    assert (data["width"], data["height"]) == (640, 480)
+
+
+def test_patient_screen_open_when_no_pin_configured(client, monkeypatch):
+    monkeypatch.setattr(config, "PATIENT_PIN", None)
+    assert client.get("/").status_code == 200
+    assert client.get("/api/stats").status_code == 200
+
+
+def test_patient_pin_blocks_pages_and_apis(client, monkeypatch):
+    monkeypatch.setattr(config, "PATIENT_PIN", "2468")
+    page = client.get("/", follow_redirects=False)
+    assert page.status_code in (301, 302)
+    assert "/patient/login" in page.headers.get("Location", "")
+    assert client.get("/api/recent-visits").status_code == 401
+    assert client.get("/api/current-person").status_code == 401
+
+
+def test_patient_pin_wrong_then_right(client, monkeypatch):
+    monkeypatch.setattr(config, "PATIENT_PIN", "2468")
+    client.post("/patient/login", data={"pin": "0000"})
+    assert client.get("/api/stats").status_code == 401
+    client.post("/patient/login", data={"pin": "2468"})
+    assert client.get("/api/stats").status_code == 200
+    assert client.get("/").status_code == 200
+
+
+def test_caregiver_session_also_opens_patient_screen(client, monkeypatch):
+    monkeypatch.setattr(config, "PATIENT_PIN", "2468")
+    client.post("/caregiver/login", data={"password": config.CAREGIVER_PASS})
+    assert client.get("/api/stats").status_code == 200

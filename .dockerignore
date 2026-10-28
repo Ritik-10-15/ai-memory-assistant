@@ -1,0 +1,26 @@
+# Keep secrets, personal data and local-only files out of the image.
+.env
+.git
+.github
+.vscode
+.pytest_cache
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Personal / biometric data — lives on the /data volume instead
+known_faces/
+uploads/
+memory_v2.db*
+*.db-wal
+*.db-shm
+gallery_cache.npz
+
+# Downloaded inside the image build
+models/
+
+# Large local-only files
+*.exe
+assets/
+tests/

@@ -20,8 +20,13 @@ from database import get_db
 from services import auto_log, WHISPER
 from vision import load_known_faces
 from worker import detection, det_lock
-from camera import generate_frames, capture_enroll_frame
+from camera import generate_frames, capture_enroll_frame, process_frame, decode_jpeg
 import threading
+
+
+@app.context_processor
+def inject_camera_mode():
+    return {"camera_mode": config.CAMERA_MODE}
 
 
 def caregiver_required(f):
@@ -33,18 +38,67 @@ def caregiver_required(f):
     return dec
 
 
+def patient_required(f):
+    """Gate the patient screen behind PATIENT_PIN when one is configured.
+    Pages redirect to the PIN screen; JSON/API calls get a 401."""
+    @wraps(f)
+    def dec(*a, **kw):
+        if config.PATIENT_PIN and not (session.get("patient") or session.get("caregiver")):
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Not signed in"}), 401
+            return redirect(url_for("patient_login"))
+        return f(*a, **kw)
+    return dec
+
+
+@app.route("/healthz")
+def healthz():
+    return "ok"
+
+
 # ── PATIENT ROUTES ────────────────────────────────────────────────────
+@app.route("/patient/login", methods=["GET", "POST"])
+def patient_login():
+    if not config.PATIENT_PIN:
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        if request.form.get("pin") == config.PATIENT_PIN:
+            session.permanent = True
+            session["patient"] = True
+            return redirect(url_for("index"))
+        flash("Incorrect PIN")
+    return render_template("patient_login.html")
+
+
 @app.route("/")
+@patient_required
 def index():
     return render_template("index.html")
 
 
 @app.route("/video")
+@patient_required
 def video():
     return Response(generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
+@app.route("/api/frame", methods=["POST"])
+@patient_required
+def api_frame():
+    """Browser-camera mode: one JPEG frame in, the detected face box out.
+    Recognition itself still happens on the worker thread; the page reads
+    the result from /api/current-person as usual."""
+    frame = decode_jpeg(request.get_data())
+    if frame is None:
+        return jsonify({"error": "Invalid image"}), 400
+    row = process_frame(frame)
+    h, w = frame.shape[:2]
+    box = [int(v) for v in row[:4]] if row is not None else None
+    return jsonify({"box": box, "width": w, "height": h})
+
+
 @app.route("/api/current-person")
+@patient_required
 def api_current_person():
     with det_lock:
         d = dict(detection)
@@ -67,6 +121,7 @@ def api_current_person():
 
 
 @app.route("/api/save-memory", methods=["POST"])
+@patient_required
 def api_save_memory():
     data = request.json or {}
     summary = data.get("summary", "").strip()
@@ -91,6 +146,7 @@ def api_save_memory():
 
 
 @app.route("/api/recent-visits")
+@patient_required
 def api_recent_visits():
     with get_db() as c:
         rows = c.execute("""
@@ -102,6 +158,7 @@ def api_recent_visits():
 
 
 @app.route("/api/upload-audio", methods=["POST"])
+@patient_required
 def api_upload_audio():
     if not WHISPER:
         return jsonify({"error": "Whisper not available"}), 503
@@ -116,6 +173,7 @@ def api_upload_audio():
 
 
 @app.route("/api/stats")
+@patient_required
 def api_stats():
     with get_db() as c:
         return jsonify({
@@ -320,7 +378,12 @@ def export_csv():
 @app.route("/caregiver/enroll/<pid>/capture", methods=["POST"])
 @caregiver_required
 def enroll_capture(pid):
-    success = capture_enroll_frame(pid)
+    upload = request.files.get("frame")
+    if upload:
+        frame = decode_jpeg(upload.read())
+        success = frame is not None and capture_enroll_frame(pid, frame)
+    else:
+        success = capture_enroll_frame(pid)
     face_dir = config.KNOWN_FACES_DIR / pid
     count = len(list(face_dir.iterdir())) if face_dir.exists() else 0
     if count >= 10:

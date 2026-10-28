@@ -51,6 +51,9 @@ header h1{font-size:18px;font-weight:700}
 #vid-wrap{position:relative;border-radius:var(--radius);overflow:hidden;
   background:#0a0a0a;aspect-ratio:4/3;box-shadow:var(--shadow)}
 #vid-feed{width:100%;height:100%;object-fit:cover;display:block}
+#vid-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#cam-error{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  padding:24px;text-align:center;color:#e5e7eb;font-size:15px;line-height:1.5}
 #status-pill{position:absolute;top:12px;left:12px;padding:5px 14px;
   border-radius:999px;font-size:13px;font-weight:600;
   background:rgba(0,0,0,.55);color:#fff;backdrop-filter:blur(6px);
@@ -180,7 +183,13 @@ footer a:hover{color:var(--text)}
 <!-- Camera -->
 <div id="cam-panel">
   <div id="vid-wrap">
+    {% if camera_mode == "browser" %}
+    <video id="vid-feed" autoplay playsinline muted></video>
+    <canvas id="vid-overlay"></canvas>
+    <div id="cam-error"></div>
+    {% else %}
     <img id="vid-feed" src="/video" alt="Camera">
+    {% endif %}
     <div id="status-pill">Looking…</div>
   </div>
   <div id="conf-bar-wrap"><div id="conf-bar"></div></div>
@@ -255,6 +264,7 @@ let currentPid = null, currentName = null, mediaRec = null,
 let lastMemoryText = "";       // the most recent summary (what we speak)
 let recapMemories  = [];       // last few, for the earlier-conversations list
 let isSpeaking     = false;
+let lastDetection  = {};       // latest /api/current-person (for the overlay)
 
 // Clock
 function tick() {
@@ -352,6 +362,7 @@ function setSpeakingUI(speaking) {
 async function poll() {
   try {
     const d = await fetch("/api/current-person").then(r=>r.json());
+    lastDetection = d;
     updateUI(d);
   } catch(e) {}
   setTimeout(poll, 700);
@@ -603,5 +614,70 @@ loadRecent();
 setInterval(loadStats,  15000);
 setInterval(loadRecent, 30000);
 </script>
+{% if camera_mode == "browser" %}
+<script>
+// ── BROWSER CAMERA ──────────────────────────────────────────────
+// The server has no webcam in the cloud, so this page captures one with
+// getUserMedia and posts JPEG frames to /api/frame. Recognition runs on
+// the server exactly as before; the face box is drawn here on a canvas.
+const video   = document.getElementById("vid-feed");
+const overlay = document.getElementById("vid-overlay");
+const grab    = document.createElement("canvas");
+const COLORS  = {high:"#22c55e", medium:"#fbbf24", unknown:"#dc3c3c"};
+
+async function startCamera() {
+  try {
+    video.srcObject = await navigator.mediaDevices.getUserMedia(
+      {video:{width:{ideal:640}, height:{ideal:480}}, audio:false});
+    await video.play();
+    sendFrames();
+  } catch(e) {
+    const err = document.getElementById("cam-error");
+    err.textContent = "Camera unavailable — allow camera access for this site and reload the page.";
+    err.style.display = "flex";
+  }
+}
+
+async function sendFrames() {
+  if (!document.hidden && video.videoWidth) {
+    grab.width = video.videoWidth; grab.height = video.videoHeight;
+    grab.getContext("2d").drawImage(video, 0, 0);
+    const blob = await new Promise(r => grab.toBlob(r, "image/jpeg", 0.8));
+    try {
+      const res = await fetch("/api/frame", {method:"POST", body:blob,
+                                             headers:{"Content-Type":"image/jpeg"}});
+      drawBox(await res.json());
+    } catch(e) {}
+  }
+  setTimeout(sendFrames, 150);
+}
+
+// Map the box from video pixels to the displayed (object-fit:cover) element.
+function drawBox(f) {
+  const cw = overlay.clientWidth, ch = overlay.clientHeight;
+  overlay.width = cw; overlay.height = ch;
+  const ctx = overlay.getContext("2d");
+  ctx.clearRect(0, 0, cw, ch);
+  if (!f || !f.box) return;
+  const s  = Math.max(cw / f.width, ch / f.height);
+  const ox = (cw - f.width * s) / 2, oy = (ch - f.height * s) / 2;
+  const [x, y, w, h] = [f.box[0]*s + ox, f.box[1]*s + oy, f.box[2]*s, f.box[3]*s];
+  const d = lastDetection, name = (d.name || "").replace(/\b\w/g, c => c.toUpperCase());
+  const color = COLORS[d.state] || "#9ca3af";
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+  const label = d.state === "high" && name ? name
+              : d.state === "medium" && name ? `Maybe ${name}?`
+              : d.state === "unknown" ? "Unknown person" : "";
+  if (label) {
+    ctx.font = "600 15px -apple-system,Segoe UI,sans-serif";
+    const tw = ctx.measureText(label).width;
+    ctx.fillStyle = color; ctx.fillRect(x, y - 26, tw + 14, 26);
+    ctx.fillStyle = "#fff"; ctx.fillText(label, x + 7, y - 8);
+  }
+}
+
+startCamera();
+</script>
+{% endif %}
 </body>
 </html>

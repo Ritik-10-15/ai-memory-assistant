@@ -97,7 +97,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 3. Download the face detection/recognition models (~38 MB)
-python download_models.py
+python scripts/download_models.py
 
 # 4. Run
 python app.py
@@ -134,7 +134,7 @@ Three ways, all through the caregiver panel (`/caregiver` → Add person / Edit)
 
 1. **Upload photos** from a folder.
 2. **Live capture** from the webcam on a person's edit page.
-3. **`capture_faces.py`** — a standalone script that guides you through ~45 shots
+3. **`scripts/capture_faces.py`** — a standalone script that guides you through ~45 shots
    at varied distance/angle/expression (run with the main app stopped so the
    camera is free).
 
@@ -170,6 +170,53 @@ Matching uses cosine similarity (higher = more similar):
 These live at the top of `app.py` (`SCORE_HIGH` / `SCORE_MEDIUM`) and can be
 tuned to a specific camera and lighting setup by watching the `[RECOG] score=`
 values printed to the console.
+
+---
+
+## Deploying to the cloud (Docker)
+
+Locally, OpenCV reads a webcam plugged into the machine running the app. A
+cloud server has no webcam, so the Docker image runs in **browser-camera
+mode** (`CAMERA_MODE=browser`): the patient/enrollment pages capture the
+webcam with `getUserMedia` and post JPEG frames to `/api/frame`. Detection,
+recognition, the state machine and visit logging are unchanged — they run on
+the server exactly as before.
+
+```bash
+docker build -t memory-assistant .
+docker run -p 8000:8000 \
+  -e CAREGIVER_PASSWORD=<strong-password> \
+  -e PATIENT_PIN=<pin> \
+  -e SECRET_KEY=<long-random-string> \
+  -v memory-data:/data \
+  memory-assistant
+```
+
+| Variable             | Purpose                                                    |
+|----------------------|------------------------------------------------------------|
+| `CAREGIVER_PASSWORD` | Required — the container refuses to start on the default   |
+| `PATIENT_PIN`        | Required — entered once per patient device (stays signed in for a year) |
+| `SECRET_KEY`         | Required — signs the caregiver session cookie              |
+| `DATA_DIR`           | Where the DB, faces and uploads live (`/data` in the image) |
+| `CAMERA_MODE`        | `browser` in the image, `server` for local `python app.py`  |
+| `OPENAI_API_KEY`     | Optional — memory summarisation                            |
+
+**On Render:** the repo includes a `render.yaml` blueprint. In the Render
+dashboard choose **New → Blueprint**, select this repo, and fill in
+`CAREGIVER_PASSWORD`, `PATIENT_PIN` (and optionally `OPENAI_API_KEY`) when
+prompted. `SECRET_KEY` is generated for you, and a 1 GB disk is mounted at
+`/data`. Every push to `main` redeploys.
+
+Notes for any hosting platform:
+
+- **Mount a persistent volume at `/data`.** Without one, every enrolled
+  person and memory is wiped on each redeploy/restart.
+- **HTTPS is required** for browsers to allow camera access (every major
+  platform provides it automatically; `localhost` is also allowed).
+- The image runs **one** gunicorn worker on purpose — recognition state is
+  in-process memory (see `wsgi.py`).
+- Whisper voice memos and server-side spoken greetings are left out of the
+  image (PyTorch alone is ~2 GB). Text recall and browser read-aloud work.
 
 ---
 

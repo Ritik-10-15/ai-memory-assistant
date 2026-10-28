@@ -8,6 +8,7 @@ import threading
 import time
 
 import cv2
+import numpy as np
 
 import config
 from vision import detect_faces
@@ -42,8 +43,33 @@ def get_camera():
     return _camera
 
 
-def generate_frames():
+def process_frame(frame):
+    """Detect faces in one BGR frame, hand the largest to the recognition
+    worker, and run the no-face timeout. Shared by the server-camera MJPEG
+    stream and browser-posted frames (/api/frame). Returns the face row or None."""
     global _no_face
+    faces = detect_faces(frame)   # YuNet, once per frame
+    best_row = max(faces, key=lambda f: f[2] * f[3]) if len(faces) > 0 else None
+    try:
+        frame_q.put_nowait((frame.copy(), best_row))
+    except queue.Full:
+        pass
+
+    if best_row is None:
+        _no_face += 1
+        if _no_face >= config.NO_FACE_TIMEOUT:
+            visit_tracker.gone()
+            with det_lock:
+                detection.update({
+                    "person_id": None, "name": None, "confidence": 0.0,
+                    "state": "idle", "emotion": None, "recent_memories": [],
+                })
+    else:
+        _no_face = 0
+    return best_row
+
+
+def generate_frames():
     cam = get_camera()
     if cam is None:
         return
@@ -55,24 +81,8 @@ def generate_frames():
             time.sleep(0.05)
             continue
 
-        faces = detect_faces(frame)   # YuNet, once per frame
-        best_row = max(faces, key=lambda f: f[2] * f[3]) if len(faces) > 0 else None
-        try:
-            frame_q.put_nowait((frame.copy(), best_row))
-        except queue.Full:
-            pass
-
-        if best_row is None:
-            _no_face += 1
-            if _no_face >= config.NO_FACE_TIMEOUT:
-                visit_tracker.gone()
-                with det_lock:
-                    detection.update({
-                        "person_id": None, "name": None, "confidence": 0.0,
-                        "state": "idle", "emotion": None, "recent_memories": [],
-                    })
-        else:
-            _no_face = 0
+        best_row = process_frame(frame)
+        if best_row is not None:
             x, y, w, h = [int(v) for v in best_row[:4]]
             with det_lock:
                 state = detection["state"]; name = detection["name"]; conf = detection["confidence"]
@@ -100,13 +110,26 @@ def generate_frames():
             yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n")
 
 
-def capture_enroll_frame(pid):
-    cam = get_camera()
-    if cam is None:
-        return False
-    ok, frame = cam.read()
-    if not ok or frame is None:
-        return False
+def decode_jpeg(data):
+    """Decode uploaded image bytes (from the browser camera) to a BGR frame."""
+    if not data:
+        return None
+    frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+    if frame is None or frame.size == 0:
+        return None
+    return frame
+
+
+def capture_enroll_frame(pid, frame=None):
+    """Save one face crop for enrollment. `frame` comes from the browser
+    camera; when omitted, it is read from the server webcam."""
+    if frame is None:
+        cam = get_camera()
+        if cam is None:
+            return False
+        ok, frame = cam.read()
+        if not ok or frame is None:
+            return False
     faces = detect_faces(frame)
     if len(faces) == 0:
         return False

@@ -60,7 +60,11 @@ button{flex:1;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cur
         <li>Stay 50–80cm from camera</li>
       </ul>
     </div>
+    {% if camera_mode == "browser" %}
+    <video id="server-feed" autoplay playsinline muted></video>
+    {% else %}
     <img id="server-feed" src="/video" alt="Camera feed">
+    {% endif %}
     <div id="progress-wrap">
       <div id="progress-bg"><div id="progress-fill"></div></div>
       <div id="progress-label">0 / 20 photos captured</div>
@@ -101,7 +105,7 @@ function startCapture() {
 
 async function captureOne() {
   try {
-    const res  = await fetch(`/caregiver/enroll/${PID}/capture`, {method:"POST"});
+    const res  = await fetch(`/caregiver/enroll/${PID}/capture`, {method:"POST", body: await frameForm()});
     const data = await res.json();
     if (data.success) {
       captured = data.count;
@@ -114,6 +118,26 @@ async function captureOne() {
   } catch(e) {
     setStatus("Error — check that the app is running.", "error");
   }
+}
+
+// Browser-camera mode: attach the current webcam frame to the capture
+// request. In server-camera mode there's no <video>, so send nothing and
+// the server reads its own webcam.
+const camVideo = document.querySelector("video#server-feed");
+if (camVideo) {
+  navigator.mediaDevices.getUserMedia({video:{width:{ideal:640}, height:{ideal:480}}, audio:false})
+    .then(s => { camVideo.srcObject = s; })
+    .catch(() => setStatus("Camera unavailable — allow camera access and reload.", "error"));
+}
+
+async function frameForm() {
+  if (!camVideo || !camVideo.videoWidth) return null;
+  const c = document.createElement("canvas");
+  c.width = camVideo.videoWidth; c.height = camVideo.videoHeight;
+  c.getContext("2d").drawImage(camVideo, 0, 0);
+  const form = new FormData();
+  form.append("frame", await new Promise(r => c.toBlob(r, "image/jpeg", 0.92)), "frame.jpg");
+  return form;
 }
 
 function stopCapture() {

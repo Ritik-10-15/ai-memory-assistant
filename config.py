@@ -7,16 +7,29 @@ always safe to import from anywhere, including tests.
 import os
 from pathlib import Path
 
-KNOWN_FACES_DIR = Path("known_faces")
-UPLOADS_DIR     = Path("uploads")
+# DATA_DIR holds everything that must survive a restart (DB, enrolled faces,
+# uploads, embedding cache). Defaults to the project folder for local runs;
+# in the cloud, point it at a mounted persistent volume (e.g. /data).
+DATA_DIR        = Path(os.environ.get("DATA_DIR", "."))
+KNOWN_FACES_DIR = DATA_DIR / "known_faces"
+UPLOADS_DIR     = DATA_DIR / "uploads"
 MODELS_DIR      = Path("models")
-DB_PATH         = "memory_v2.db"
+DB_PATH         = str(DATA_DIR / "memory_v2.db")
 CAREGIVER_PASS  = os.environ.get("CAREGIVER_PASSWORD", "caregiver123")
+# When set, the patient screen and its APIs require this PIN once per device.
+# Unset (local default) leaves the patient screen open, as before.
+PATIENT_PIN     = os.environ.get("PATIENT_PIN")
 SECRET_KEY      = os.environ.get("SECRET_KEY", "alzheimer-secret-v3-2024")
 
 YUNET_PATH = MODELS_DIR / "face_detection_yunet_2023mar.onnx"
 SFACE_PATH = MODELS_DIR / "face_recognition_sface_2021dec.onnx"
-GALLERY_CACHE = Path("gallery_cache.npz")
+GALLERY_CACHE = DATA_DIR / "gallery_cache.npz"
+
+# "server": OpenCV opens a webcam attached to the machine running the app
+#           (the original local setup).
+# "browser": the viewer's browser captures the webcam and posts frames to
+#           /api/frame — required when the app runs on a cloud server.
+CAMERA_MODE = os.environ.get("CAMERA_MODE", "server")
 
 # Recognition thresholds — SFace cosine similarity, official same-person
 # threshold is 0.363. Two bands so the UI can say "recognized" vs "might be".

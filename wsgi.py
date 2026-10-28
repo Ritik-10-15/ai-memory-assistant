@@ -1,0 +1,26 @@
+"""
+wsgi.py — production entry point (used by gunicorn in the Docker image).
+
+    gunicorn --workers 1 --threads 8 wsgi:app
+
+Run exactly ONE worker process: the recognition state (worker.detection,
+the frame queue, the visit tracker) lives in process memory, so a second
+process would have its own camera state and the patient screen would
+flicker between them. Threads give the concurrency instead.
+"""
+import os
+import sys
+
+import config
+from app import app, startup
+
+# Refuse to serve real patient data behind the publicly-known defaults.
+# Exit code 3 is gunicorn's "worker failed to boot": it stops the server
+# instead of restarting the worker in an endless loop.
+if (config.CAREGIVER_PASS == "caregiver123" or "SECRET_KEY" not in os.environ
+        or not config.PATIENT_PIN):
+    print("❌ Set CAREGIVER_PASSWORD, PATIENT_PIN and SECRET_KEY environment "
+          "variables before running in production.", flush=True)
+    sys.exit(3)
+
+startup()
