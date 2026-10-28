@@ -60,9 +60,13 @@ def process_frame(frame):
         if _no_face >= config.NO_FACE_TIMEOUT:
             visit_tracker.gone()
             with det_lock:
+                # Clear every person field, not just the name, so nothing
+                # about the previous visitor lingers in the API response.
                 detection.update({
                     "person_id": None, "name": None, "confidence": 0.0,
-                    "state": "idle", "emotion": None, "recent_memories": [],
+                    "state": "idle", "emotion": None, "relationship": None,
+                    "notes": None, "last_memory": None, "recent_memories": [],
+                    "last_visit_at": None,
                 })
     else:
         _no_face = 0
@@ -122,17 +126,23 @@ def decode_jpeg(data):
 
 def capture_enroll_frame(pid, frame=None):
     """Save one face crop for enrollment. `frame` comes from the browser
-    camera; when omitted, it is read from the server webcam."""
+    camera; when omitted, it is read from the server webcam.
+
+    Returns (saved, reason). A frame with more than one face is rejected
+    rather than guessing which face to enroll — enrolling the wrong person
+    would teach the gallery a false identity."""
     if frame is None:
         cam = get_camera()
         if cam is None:
-            return False
+            return False, "camera_unavailable"
         ok, frame = cam.read()
         if not ok or frame is None:
-            return False
+            return False, "camera_unavailable"
     faces = detect_faces(frame)
     if len(faces) == 0:
-        return False
+        return False, "no_face"
+    if len(faces) > 1:
+        return False, "multiple_faces"
     x, y, w, h = [int(v) for v in max(faces, key=lambda f: f[2] * f[3])[:4]]
     pad = int(0.35 * max(w, h))
     x0, y0 = max(0, x - pad), max(0, y - pad)
@@ -141,4 +151,4 @@ def capture_enroll_frame(pid, frame=None):
     face_dir.mkdir(parents=True, exist_ok=True)
     count = len(list(face_dir.iterdir()))
     cv2.imwrite(str(face_dir / f"{count:03d}.jpg"), frame[y0:y1, x0:x1])
-    return True
+    return True, None

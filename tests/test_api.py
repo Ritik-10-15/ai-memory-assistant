@@ -47,11 +47,15 @@ def test_caregiver_dashboard_requires_login(client):
 
 
 def test_caregiver_login_wrong_password_rejected(client):
+    # The form endpoint redirects back to the (React) login page with an
+    # error flag, and grants no session.
     resp = client.post(
-        "/caregiver/login", data={"password": "wrong"}, follow_redirects=True
+        "/caregiver/login", data={"password": "wrong"}, follow_redirects=False
     )
-    assert resp.status_code == 200
-    assert b"login" in resp.data.lower() or b"incorrect" in resp.data.lower()
+    assert resp.status_code in (301, 302)
+    assert "/caregiver/login?error=invalid" in resp.headers.get("Location", "")
+    dash = client.get("/caregiver", follow_redirects=False)
+    assert "/caregiver/login" in dash.headers.get("Location", "")
 
 
 def test_caregiver_login_correct_password_grants_access(client):

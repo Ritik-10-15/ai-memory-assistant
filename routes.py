@@ -5,17 +5,22 @@ password-protected caregiver panel.
 No recognition or database logic lives here — routes call into vision.py,
 worker.py, camera.py, services.py, and database.py, and translate the
 result into HTTP responses. That's the whole job of this layer.
+
+Pages (GET) are served by the React app in frontend/dist; the form-POST
+endpoints below are kept so existing scripts and bookmarks keep working.
+The JSON API the React caregiver dashboard uses lives in api.py.
 """
 import shutil
 import uuid
-from functools import wraps
 from pathlib import Path
 
-from flask import (render_template, Response, jsonify, request,
-                    redirect, url_for, session, flash, make_response)
+from flask import (Response, jsonify, request, redirect, url_for, session,
+                   flash, make_response, send_from_directory)
 
 import config
 from app_instance import app
+from auth import (caregiver_required, patient_required, secret_matches,
+                  retry_after, record_failure, clear_failures)
 from database import get_db
 from services import auto_log, WHISPER
 from vision import load_known_faces
@@ -24,31 +29,29 @@ from camera import generate_frames, capture_enroll_frame, process_frame, decode_
 import threading
 
 
-@app.context_processor
-def inject_camera_mode():
-    return {"camera_mode": config.CAMERA_MODE}
+# ── REACT FRONTEND ────────────────────────────────────────────────────
+def spa():
+    """The single-page app shell. Routing happens client-side."""
+    index_file = config.FRONTEND_DIST / "index.html"
+    if not index_file.exists():
+        return ("Frontend not built. Run `npm install && npm run build` in "
+                "frontend/, or use `npm run dev` during development.", 503)
+    resp = send_from_directory(config.FRONTEND_DIST, "index.html")
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
-def caregiver_required(f):
-    @wraps(f)
-    def dec(*a, **kw):
-        if not session.get("caregiver"):
-            return redirect(url_for("caregiver_login"))
-        return f(*a, **kw)
-    return dec
+@app.route("/assets/<path:filename>")
+def frontend_assets(filename):
+    # Vite fingerprints asset names, so they can be cached for a long time.
+    resp = send_from_directory(config.FRONTEND_DIST / "assets", filename)
+    resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return resp
 
 
-def patient_required(f):
-    """Gate the patient screen behind PATIENT_PIN when one is configured.
-    Pages redirect to the PIN screen; JSON/API calls get a 401."""
-    @wraps(f)
-    def dec(*a, **kw):
-        if config.PATIENT_PIN and not (session.get("patient") or session.get("caregiver")):
-            if request.path.startswith("/api/"):
-                return jsonify({"error": "Not signed in"}), 401
-            return redirect(url_for("patient_login"))
-        return f(*a, **kw)
-    return dec
+@app.route("/favicon.svg")
+def favicon():
+    return send_from_directory(config.FRONTEND_DIST, "favicon.svg")
 
 
 @app.route("/healthz")
@@ -62,18 +65,22 @@ def patient_login():
     if not config.PATIENT_PIN:
         return redirect(url_for("index"))
     if request.method == "POST":
-        if request.form.get("pin") == config.PATIENT_PIN:
+        if retry_after("patient"):
+            return redirect(url_for("patient_login", error="locked"))
+        if secret_matches(request.form.get("pin"), config.PATIENT_PIN):
+            clear_failures("patient")
             session.permanent = True
             session["patient"] = True
             return redirect(url_for("index"))
-        flash("Incorrect PIN")
-    return render_template("patient_login.html")
+        record_failure("patient")
+        return redirect(url_for("patient_login", error="invalid"))
+    return spa()
 
 
 @app.route("/")
 @patient_required
 def index():
-    return render_template("index.html")
+    return spa()
 
 
 @app.route("/video")
@@ -190,11 +197,15 @@ def api_stats():
 @app.route("/caregiver/login", methods=["GET", "POST"])
 def caregiver_login():
     if request.method == "POST":
-        if request.form.get("password") == config.CAREGIVER_PASS:
+        if retry_after("caregiver"):
+            return redirect(url_for("caregiver_login", error="locked"))
+        if secret_matches(request.form.get("password"), config.CAREGIVER_PASS):
+            clear_failures("caregiver")
             session["caregiver"] = True
             return redirect(url_for("caregiver_dashboard"))
-        flash("Incorrect password")
-    return render_template("caregiver_login.html")
+        record_failure("caregiver")
+        return redirect(url_for("caregiver_login", error="invalid"))
+    return spa()
 
 
 @app.route("/caregiver/logout")
@@ -206,15 +217,16 @@ def caregiver_logout():
 @app.route("/caregiver")
 @caregiver_required
 def caregiver_dashboard():
-    with get_db() as c:
-        people = c.execute("SELECT * FROM people ORDER BY name").fetchall()
-        visits = c.execute("""
-            SELECT v.*,p.name FROM visits v
-            JOIN people p ON v.person_id=p.id
-            ORDER BY v.started_at DESC LIMIT 25
-        """).fetchall()
-        unseen = c.execute("SELECT COUNT(*) FROM alerts WHERE seen=0").fetchone()[0]
-    return render_template("caregiver_dashboard.html", people=people, visits=visits, unseen=unseen)
+    return spa()
+
+
+@app.route("/caregiver/<path:_subpage>")
+@caregiver_required
+def caregiver_pages(_subpage):
+    """Client-side caregiver routes (people, memories, visits, settings).
+    More specific rules — the login page and the form-POST endpoints —
+    take precedence over this catch-all."""
+    return spa()
 
 
 @app.route("/caregiver/people/add", methods=["GET", "POST"])
@@ -224,7 +236,7 @@ def add_person():
         name = request.form.get("name", "").strip()
         if not name:
             flash("Name is required")
-            return render_template("add_person.html")
+            return redirect(url_for("add_person"))
         pid = str(uuid.uuid4())
         face_dir = config.KNOWN_FACES_DIR / pid
         face_dir.mkdir(parents=True, exist_ok=True)
@@ -243,17 +255,16 @@ def add_person():
         threading.Thread(target=load_known_faces, daemon=True).start()
         flash(f"✅ Added {name} with {saved} photo(s)")
         return redirect(url_for("caregiver_dashboard"))
-    return render_template("add_person.html")
+    return spa()
 
 
 @app.route("/caregiver/people/<pid>/edit", methods=["GET", "POST"])
 @caregiver_required
 def edit_person(pid):
+    if request.method == "GET":
+        return spa()   # the React page loads the person via the JSON API
     with get_db() as c:
         person = c.execute("SELECT * FROM people WHERE id=?", (pid,)).fetchone()
-        memories = c.execute(
-            "SELECT * FROM memories WHERE person_id=? ORDER BY created_at DESC", (pid,)
-        ).fetchall()
     if not person:
         flash("Not found")
         return redirect(url_for("caregiver_dashboard"))
@@ -276,7 +287,6 @@ def edit_person(pid):
         threading.Thread(target=load_known_faces, daemon=True).start()
         flash(f"✅ Updated — {saved} new photo(s) added")
         return redirect(url_for("caregiver_dashboard"))
-    return render_template("edit_person.html", person=person, memories=memories)
 
 
 @app.route("/caregiver/people/<pid>/delete", methods=["POST"])
@@ -288,8 +298,10 @@ def delete_person(pid):
             c.execute("DELETE FROM people WHERE id=?", (pid,))
             c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
             c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+    # Only remove a folder that belongs to a real person: an arbitrary id
+    # such as ".." would otherwise point outside known_faces/.
     d = config.KNOWN_FACES_DIR / pid
-    if d.exists():
+    if p and d.exists():
         shutil.rmtree(d)
     threading.Thread(target=load_known_faces, daemon=True).start()
     flash(f"Deleted {p['name'] if p else pid}")
@@ -331,27 +343,7 @@ def delete_memory(mem_id):
 @app.route("/caregiver/analytics")
 @caregiver_required
 def analytics():
-    with get_db() as c:
-        visit_counts = c.execute("""
-            SELECT p.name,COUNT(v.id) as cnt,
-                   COALESCE(AVG(v.duration_s),0) as avg_dur,
-                   MAX(v.started_at) as last_seen
-            FROM people p LEFT JOIN visits v ON p.id=v.person_id
-            GROUP BY p.id ORDER BY cnt DESC
-        """).fetchall()
-        daily = c.execute("""
-            SELECT DATE(started_at) as day,COUNT(*) as cnt
-            FROM visits GROUP BY day ORDER BY day DESC LIMIT 30
-        """).fetchall()
-        emotions = c.execute("""
-            SELECT emotion,COUNT(*) as cnt FROM visits
-            WHERE emotion IS NOT NULL GROUP BY emotion
-        """).fetchall()
-        memory_sources = c.execute(
-            "SELECT source,COUNT(*) as cnt FROM memories GROUP BY source"
-        ).fetchall()
-    return render_template("analytics.html", visit_counts=visit_counts, daily=daily,
-                            emotions=emotions, memory_sources=memory_sources)
+    return spa()
 
 
 @app.route("/caregiver/export/csv")
@@ -378,25 +370,31 @@ def export_csv():
 @app.route("/caregiver/enroll/<pid>/capture", methods=["POST"])
 @caregiver_required
 def enroll_capture(pid):
+    """Returns {success, count} as before, plus `reason` when a frame is
+    rejected: no_face, multiple_faces, invalid_image or camera_unavailable."""
+    with get_db() as c:
+        if not c.execute("SELECT 1 FROM people WHERE id=?", (pid,)).fetchone():
+            return jsonify({"success": False, "count": 0, "reason": "unknown_person"}), 404
     upload = request.files.get("frame")
     if upload:
         frame = decode_jpeg(upload.read())
-        success = frame is not None and capture_enroll_frame(pid, frame)
+        if frame is None:
+            success, reason = False, "invalid_image"
+        else:
+            success, reason = capture_enroll_frame(pid, frame)
     else:
-        success = capture_enroll_frame(pid)
+        success, reason = capture_enroll_frame(pid)
     face_dir = config.KNOWN_FACES_DIR / pid
     count = len(list(face_dir.iterdir())) if face_dir.exists() else 0
-    if count >= 10:
+    if success and count >= 10:
         threading.Thread(target=load_known_faces, daemon=True).start()
-    return jsonify({"success": success, "count": count})
+    body = {"success": success, "count": count}
+    if reason:
+        body["reason"] = reason
+    return jsonify(body)
 
 
 @app.route("/caregiver/enroll/<pid>")
 @caregiver_required
 def enroll_page(pid):
-    with get_db() as c:
-        person = c.execute("SELECT * FROM people WHERE id=?", (pid,)).fetchone()
-    if not person:
-        flash("Person not found")
-        return redirect(url_for("caregiver_dashboard"))
-    return render_template("enroll.html", person=person)
+    return spa()
