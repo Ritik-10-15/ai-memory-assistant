@@ -1,4 +1,13 @@
+# SITE_ADDRESS is the instance's public IP. Let's Encrypt issues IP-address
+# certificates only under its short-lived (~6 day) profile; Caddy renews them
+# automatically. Using the bare IP avoids wildcard-DNS hostnames (sslip.io,
+# nip.io), which many network filters block.
 {$SITE_ADDRESS} {
+	tls {
+		issuer acme {
+			profile shortlived
+		}
+	}
 	encode gzip
 	reverse_proxy app:8000
 }

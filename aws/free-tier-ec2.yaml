@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Single-instance AI Memory Assistant (HTTPS via Caddy + sslip.io) for eligible AWS Free Tier accounts.
+Description: Single-instance AI Memory Assistant (HTTPS via Caddy + Let's Encrypt IP certificate) for eligible AWS Free Tier accounts.
 
 Parameters:
   CaregiverPassword:
@@ -212,11 +212,11 @@ Resources:
 
 Outputs:
   AppUrl:
-    Description: Public HTTPS URL. The IP (and so the hostname) changes if the instance is stopped and started; check the instance's public IP then.
-    Value: !Sub https://${AppInstance.PublicIp}.sslip.io
+    Description: Public HTTPS URL. The IP changes if the instance is stopped and started; check the instance's public IP then.
+    Value: !Sub https://${AppInstance.PublicIp}
   CaregiverUrl:
     Description: Caregiver panel.
-    Value: !Sub https://${AppInstance.PublicIp}.sslip.io/caregiver
+    Value: !Sub https://${AppInstance.PublicIp}/caregiver
   InstanceId:
     Description: EC2 instance ID for administration and cleanup.
     Value: !Ref AppInstance

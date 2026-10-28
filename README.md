@@ -209,9 +209,9 @@ prompted. `SECRET_KEY` is generated for you, and a 1 GB disk is mounted at
 
 **On AWS (Free Tier, one EC2 instance):** `aws/free-tier-ec2.yaml` creates a
 `t4g.small` that clones this repo and runs `docker-compose.aws.yml` — the app
-plus Caddy, which serves HTTPS with a free Let's Encrypt certificate for
-`<public-ip>.sslip.io` (no domain needed; HTTPS is what lets the browser use
-the camera). Data lives in a Docker volume on the instance's EBS disk.
+plus Caddy, which serves HTTPS with a free, auto-renewed Let's Encrypt
+certificate for the instance's public IP (no domain needed; HTTPS is what
+lets the browser use the camera). Data lives in a Docker volume on the instance's EBS disk.
 
 ```bash
 aws cloudformation create-stack --region us-east-2 \
