@@ -114,7 +114,8 @@ export const api = {
   },
   stats: () => request<Stats>("GET", "/api/stats"),
   status: () => request<AppStatus>("GET", "/api/status"),
-  personPhotoUrl: (personId: string) => `/api/people/${encodeURIComponent(personId)}/photo`,
+  personPhotoUrl: (personId: string, version?: string | null) =>
+    `/api/people/${encodeURIComponent(personId)}/photo${version ? `?v=${encodeURIComponent(version)}` : ""}`,
 
   // Caregiver
   people: () => request<Person[]>("GET", "/api/caregiver/people"),

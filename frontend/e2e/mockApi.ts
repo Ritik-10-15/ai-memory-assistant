@@ -111,6 +111,8 @@ export async function mockBackend(
           daily: [{ day: new Date().toISOString().slice(0, 10), visits: 1 }],
           memory_sources: [{ source: "manual", count: 2 }],
         });
+      case "GET /api/caregiver/photos":
+        return json(route, album.photos);
       case "GET /api/album":
         return json(route, album);
       case "GET /api/family":

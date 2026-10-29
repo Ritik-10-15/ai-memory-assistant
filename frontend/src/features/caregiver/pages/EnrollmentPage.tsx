@@ -52,7 +52,7 @@ function PersonPicker() {
             {people.data.map((p) => (
               <li key={p.id}>
                 <Link to={`/caregiver/enroll/${p.id}`} className="flex items-center gap-4 px-5 py-4 hover:bg-paper">
-                  <Avatar name={p.name} src={p.photo_count ? api.personPhotoUrl(p.id) : null} />
+                  <Avatar name={p.name} src={p.photo_count || p.profile_photo_id ? api.personPhotoUrl(p.id, p.profile_photo_id) : null} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-ink">{p.name}</p>
                     <p className="truncate text-sm text-ink-muted">{p.relationship || "Relationship not set"}</p>

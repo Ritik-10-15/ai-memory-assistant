@@ -20,6 +20,7 @@ import {
 import { useAsync } from "@/hooks/useAsync";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { EnrollmentBadge, PageHeader, PhotoPicker, PhotoResults } from "../components";
+import { ProfilePhotoPicker } from "../ProfilePhotoPicker";
 import { MemoryComposer, MemoryList } from "./MemoriesPage";
 
 const EMPTY: PersonInput = { name: "", relationship: "", notes: "", dob: "", tts_greeting: "" };
@@ -131,7 +132,11 @@ export function PersonEditorPage() {
             <form onSubmit={onSubmit} className="space-y-5" noValidate>
               {person && (
                 <div className="flex items-center gap-4">
-                  <Avatar name={person.name} src={person.photo_count ? api.personPhotoUrl(person.id) : null} size="lg" />
+                  <Avatar
+                    name={person.name}
+                    src={person.photo_count || person.profile_photo_id ? api.personPhotoUrl(person.id, person.profile_photo_id) : null}
+                    size="lg"
+                  />
                   <div className="space-y-1">
                     <EnrollmentBadge person={person} />
                     <p className="text-sm text-ink-muted">
@@ -174,6 +179,12 @@ export function PersonEditorPage() {
 
         {person && detail.data && (
           <div className="space-y-6">
+            <ProfilePhotoPicker
+              person={person}
+              onChanged={(photoId) =>
+                detail.setData((prev) => (prev ? { ...prev, person: { ...prev.person, profile_photo_id: photoId } } : prev))
+              }
+            />
             <Card>
               <CardHeader title="Memories" description={`Conversations shown to the patient when ${person.name.split(" ")[0]} visits.`} />
               <CardBody className="space-y-5">

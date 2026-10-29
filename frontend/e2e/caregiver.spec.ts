@@ -25,6 +25,11 @@ test.describe("caregiver workspace", () => {
     await expect(page.getByRole("heading", { name: "Sarah Johnson" })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
     await page.screenshot({ path: `test-results/caregiver-people-${test.info().project.name}.png`, fullPage: true });
+
+    await page.goto("/caregiver/photos");
+    await expect(page.getByRole("heading", { name: "Whitby beach" })).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: `test-results/caregiver-photos-${test.info().project.name}.png`, fullPage: true });
   });
 
   test("navigation works on small screens through the menu button", async ({ page }) => {
@@ -58,6 +63,7 @@ test.describe("caregiver workspace", () => {
       ["/caregiver/memories", "Memories"],
       ["/caregiver/visits", "Visits per day"],
       ["/caregiver/settings", "Settings"],
+      ["/caregiver/photos", "Whitby beach"],
     ]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible();

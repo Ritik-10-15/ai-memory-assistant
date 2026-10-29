@@ -120,26 +120,38 @@ export function PhotoResults({ results }: { results: PhotoResult[] }) {
 }
 
 /** Multi-file image picker with thumbnail previews (object URLs are revoked). */
-export function PhotoPicker({ files, onChange }: { files: File[]; onChange: (files: File[]) => void }) {
+export function PhotoPicker({
+  files,
+  onChange,
+  label = "Face photos",
+  hint = "A few clear photos of this person alone, facing the camera. Each photo is checked for exactly one face.",
+  id = "photo-input",
+}: {
+  files: File[];
+  onChange: (files: File[]) => void;
+  label?: string;
+  hint?: string;
+  id?: string;
+}) {
   const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
 
   return (
     <div className="space-y-3">
       <div>
-        <label htmlFor="photo-input" className="block text-sm font-semibold text-ink">
-          Face photos
+        <label htmlFor={id} className="block text-sm font-semibold text-ink">
+          {label}
         </label>
-        <p id="photo-hint" className="mt-0.5 text-sm text-ink-muted">
-          A few clear photos of this person alone, facing the camera. Each photo is checked for exactly one face.
+        <p id={`${id}-hint`} className="mt-0.5 text-sm text-ink-muted">
+          {hint}
         </p>
       </div>
       <input
-        id="photo-input"
+        id={id}
         type="file"
         accept="image/jpeg,image/png"
         multiple
-        aria-describedby="photo-hint"
+        aria-describedby={`${id}-hint`}
         onChange={(e) => {
           onChange([...files, ...Array.from(e.target.files ?? [])]);
           e.target.value = "";
