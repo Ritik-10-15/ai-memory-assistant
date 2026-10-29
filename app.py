@@ -12,6 +12,7 @@ from database import init_db
 from vision import load_models, load_known_faces
 from worker import start_worker
 import routes  # noqa: F401  (import registers every route on `app`)
+import api     # noqa: F401  (JSON API for the React frontend)
 
 
 def startup():

@@ -5,6 +5,9 @@ services:
   app:
     build: .
     env_file: .env.aws
+    environment:
+      SECURE_COOKIES: "1"   # served only over HTTPS (Caddy)
+      TRUST_PROXY: "1"      # real client IPs for login throttling
     volumes:
       - memory_data:/data
     restart: unless-stopped

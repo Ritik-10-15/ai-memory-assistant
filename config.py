@@ -31,6 +31,13 @@ GALLERY_CACHE = DATA_DIR / "gallery_cache.npz"
 #           /api/frame — required when the app runs on a cloud server.
 CAMERA_MODE = os.environ.get("CAMERA_MODE", "server")
 
+# Built React app (frontend/ → `npm run build`), served by Flask.
+FRONTEND_DIST = Path(__file__).resolve().parent / "frontend" / "dist"
+
+# Production hardening, switched on by the Docker/AWS deployment.
+SECURE_COOKIES = os.environ.get("SECURE_COOKIES") == "1"   # HTTPS-only cookie
+TRUST_PROXY    = os.environ.get("TRUST_PROXY") == "1"      # behind Caddy
+
 # Recognition thresholds — SFace cosine similarity, official same-person
 # threshold is 0.363. Two bands so the UI can say "recognized" vs "might be".
 SCORE_HIGH   = 0.40

@@ -163,6 +163,35 @@ def load_known_faces():
         print("⚠️  No usable faces — add people via caregiver panel")
 
 
+def models_loaded():
+    return _detector is not None and _recognizer is not None
+
+
+def gallery_counts():
+    """{pid: number of usable embeddings} — what 'enrolled' really means."""
+    with _gallery_lock:
+        return {pid: len(feats) for pid, feats in _gallery.items()}
+
+
+def assess_enrollment_photo(bgr):
+    """Classify an uploaded enrollment photo: 'accepted' (exactly one face),
+    'no_face' or 'multiple_faces'. Mirrors _embed_photo_file's upscaling
+    and padding so a photo accepted here can also be embedded."""
+    h, w = bgr.shape[:2]
+    if max(h, w) < 250:
+        scale = 250.0 / max(h, w)
+        bgr = cv2.resize(bgr, (int(w * scale), int(h * scale)))
+    faces = detect_faces(bgr)
+    if len(faces) == 0:
+        pad = int(0.3 * max(bgr.shape[:2]))
+        faces = detect_faces(cv2.copyMakeBorder(bgr, pad, pad, pad, pad, cv2.BORDER_REPLICATE))
+    if len(faces) == 0:
+        return "no_face"
+    if len(faces) > 1:
+        return "multiple_faces"
+    return "accepted"
+
+
 def recognize(bgr, face_row):
     """Returns (pid, score, name), or (None, best_score, None) if nobody
     clears SCORE_MEDIUM. This is the open-set rejection boundary — an

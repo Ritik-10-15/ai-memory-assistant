@@ -19,10 +19,15 @@ memories.
 
 ## Demo at a glance
 
-- **Patient screen** (`/`) — live camera, large recognised name + relationship,
-  the last conversation as text, and an optional "Read this to me" button.
-- **Caregiver panel** (`/caregiver`) — add/edit/delete people, upload or live-
-  capture face photos, add and delete memory notes, and view visit analytics.
+- **Patient screen** (`/`) — a calm, high-contrast view: the recognised
+  visitor's photo, name and relationship, when they last visited, and the last
+  conversation as large text with **Read aloud / Stop**. Six distinct states
+  (recognised, not sure, unknown, nobody there, camera unavailable, connection
+  problem), with no confidence numbers shown to the patient.
+- **Caregiver workspace** (`/caregiver`) — overview with system status, a
+  searchable people list with enrollment status, guided face enrollment (camera
+  or upload, with a reason for every rejected photo), memories, a visit timeline
+  with charts, and settings.
 
 ---
 
@@ -73,7 +78,9 @@ matter more here than in a generic face demo:
 
 ## Tech stack
 
-- **Backend:** Python, Flask, SQLite
+- **Frontend:** React 18 + TypeScript, Vite, Tailwind CSS, React Router,
+  Lucide icons, Recharts; Vitest + React Testing Library + axe-core, Playwright
+- **Backend:** Python, Flask, SQLite (gunicorn + Docker in production)
 - **Vision:** OpenCV (YuNet detection + SFace recognition, ONNX models)
 - **Voice (optional):** Whisper (speech-to-text) + FFmpeg, pyttsx3 (spoken
   greeting), browser `speechSynthesis` (patient-controlled recall playback)
@@ -83,7 +90,7 @@ matter more here than in a generic face demo:
 
 ## Setup
 
-Requires Python 3.10+ and a webcam.
+Requires Python 3.10+, Node.js 20+, and a webcam.
 
 ```bash
 # 1. Create and activate a virtual environment
@@ -99,7 +106,10 @@ pip install -r requirements.txt
 # 3. Download the face detection/recognition models (~38 MB)
 python scripts/download_models.py
 
-# 4. Run
+# 4. Build the web interface (once, and after frontend changes)
+cd frontend && npm ci && npm run build && cd ..
+
+# 5. Run
 python app.py
 ```
 
@@ -110,6 +120,17 @@ Then open:
 
 The default caregiver password is `caregiver123` (override with the
 `CAREGIVER_PASSWORD` environment variable).
+
+### Frontend development
+
+For live reloading while working on the interface, run Flask and the Vite dev
+server side by side. Vite proxies API calls to Flask, so sessions work as in
+production:
+
+```bash
+python app.py                     # terminal 1 — backend on :5000
+cd frontend && npm run dev        # terminal 2 — UI on http://localhost:5173
+```
 
 ### Optional: voice memos
 
@@ -130,10 +151,14 @@ voice feature is simply disabled.
 
 ## Enrolling a person
 
-Three ways, all through the caregiver panel (`/caregiver` → Add person / Edit):
+Three ways:
 
-1. **Upload photos** from a folder.
-2. **Live capture** from the webcam on a person's edit page.
+1. **Upload photos** when adding or editing a person (`/caregiver/people`).
+   Each photo is checked for **exactly one face**; photos with no face or
+   several faces are rejected with an explanation, and accepted photos are
+   re-encoded (which strips location metadata).
+2. **Live capture** under *Face enrollment* (`/caregiver/enroll`). Frames with
+   more than one face are refused, so the wrong person can't be enrolled.
 3. **`scripts/capture_faces.py`** — a standalone script that guides you through ~45 shots
    at varied distance/angle/expression (run with the main app stopped so the
    camera is free).
@@ -146,13 +171,29 @@ each photo automatically.
 ## Project structure
 
 ```
-app.py                 Main Flask app (recognition engine, routes, DB)
-download_models.py     One-time downloader for the ONNX models
-capture_faces.py       Standalone webcam enrollment helper
-templates/             Patient screen + caregiver panel HTML
-known_faces/<id>/      Enrolled face photos, one folder per person
-models/                YuNet + SFace ONNX models (downloaded, gitignored)
-memory_v2.db           SQLite database (people, visits, memories)
+app.py / wsgi.py       Entry points (dev server / gunicorn)
+config.py              Paths, thresholds, environment settings
+vision.py              YuNet + SFace engine, gallery, visit tracking
+worker.py              Recognition worker thread + state machine
+camera.py              Server webcam / browser frames → worker queue
+routes.py              Patient API, video stream, page routes, legacy forms
+api.py                 JSON API for the React app (session, caregiver data)
+auth.py                Session gates, constant-time checks, login throttling
+frontend/              React + TypeScript app (see below)
+tests/                 pytest suite (backend)
+scripts/               Model downloader, standalone capture helper
+aws/, Dockerfile       Deployment (see "Deploying to the cloud")
+```
+
+```
+frontend/src/
+  api/                 Typed client + response types for every endpoint
+  components/ui/       Design system: Button, Card, Badge, Alert, fields,
+                       Modal/ConfirmDialog, loading/empty/error states, Avatar
+  features/patient/    Patient screen, recognition view model, camera, speech
+  features/caregiver/  Caregiver layout and pages
+  features/auth/       Caregiver and patient sign-in
+frontend/e2e/          Playwright tests (desktop, tablet, mobile)
 ```
 
 ---
@@ -161,13 +202,18 @@ memory_v2.db           SQLite database (people, visits, memories)
 
 Matching uses cosine similarity (higher = more similar):
 
-| Score        | Meaning                        | Shown as            |
+| Score        | Meaning                        | Patient screen shows |
 |--------------|--------------------------------|---------------------|
-| ≥ 0.40       | Confident match                | Name + spoken greet |
-| 0.32 – 0.40  | Possible match                 | "Maybe <name>?"     |
-| < 0.32 (face present) | Not anyone enrolled   | "Unknown person"    |
+| ≥ 0.40       | Confident match                | Name, photo, relationship, last conversation, Read aloud |
+| 0.32 – 0.40  | Possible match                 | "This might be <name>" — no photo, memories or read-aloud |
+| < 0.32 (face present) | Not anyone enrolled   | "I don't recognise this person" |
 
-These live at the top of `app.py` (`SCORE_HIGH` / `SCORE_MEDIUM`) and can be
+The patient screen renders **only the latest backend state** — nothing from a
+previous response carries over — so a name never lingers after the backend
+reports someone unknown, someone different, or nobody. Read-aloud stops as
+soon as the visitor changes or leaves.
+
+These live in `config.py` (`SCORE_HIGH` / `SCORE_MEDIUM`) and can be
 tuned to a specific camera and lighting setup by watching the `[RECOG] score=`
 values printed to the console.
 
@@ -240,6 +286,25 @@ Notes for any hosting platform:
 
 ---
 
+## Testing
+
+```bash
+pytest tests/                       # backend: API, recognition logic, database
+
+cd frontend
+npm run typecheck                   # TypeScript, strict mode
+npm test                            # Vitest + React Testing Library + axe
+npm run build && npm run test:e2e   # Playwright: desktop, tablet, mobile
+```
+
+The frontend tests cover every recognition state, switching visitors, clearing
+stale identities, outages, read-aloud controls, caregiver sign-in and session
+expiry, destructive-action confirmation, enrollment errors, keyboard access,
+layouts without horizontal scrolling, and WCAG 2.2 AA scans (including colour
+contrast) in a real browser. GitHub Actions runs all of it on every push.
+
+---
+
 ## Limitations & honest notes
 
 - Recognition quality depends on enrollment photos matching real conditions
@@ -258,10 +323,7 @@ Notes for any hosting platform:
 - Scale beyond one machine — cameras as edge clients streaming to a central service, behind a production WSGI server.
 - Vector database for the gallery — FAISS for fast nearest-neighbor matching as enrolled people grow.
 - PostgreSQL — replace SQLite for concurrent multi-user access.
-- Automated tests + CI — unit tests for the recognition state machine and database layer, run via GitHub Actions.
-- Modular refactor — split the app into recognition, database, routes, and services modules.
 - Multi-face support — detect and identify several people per frame.
-- Docker — containerize for reproducible deployment.
 
 ## License
 

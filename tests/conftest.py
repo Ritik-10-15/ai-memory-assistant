@@ -11,9 +11,24 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import auth
 import config
 import database
 import app as app_module  # composition root; importing it registers all routes
+
+
+@pytest.fixture(autouse=True)
+def isolated_files(tmp_path, monkeypatch):
+    """Per-test face folder, a stub React build (so page routes don't
+    depend on `npm run build`), and a clean login throttle."""
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text('<!doctype html><div id="root"></div>')
+    monkeypatch.setattr(config, "FRONTEND_DIST", dist)
+    monkeypatch.setattr(config, "KNOWN_FACES_DIR", tmp_path / "known_faces")
+    monkeypatch.setattr(config, "GALLERY_CACHE", tmp_path / "gallery_cache.npz")
+    auth._failures.clear()
+    yield
 
 
 @pytest.fixture
