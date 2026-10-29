@@ -19,15 +19,31 @@ memories.
 
 ## Demo at a glance
 
-- **Patient screen** (`/`) — a calm, high-contrast view: the recognised
-  visitor's photo, name and relationship, when they last visited, and the last
-  conversation as large text with **Read aloud / Stop**. Six distinct states
-  (recognised, not sure, unknown, nobody there, camera unavailable, connection
-  problem), with no confidence numbers shown to the patient.
-- **Caregiver workspace** (`/caregiver`) — overview with system status, a
-  searchable people list with enrollment status, guided face enrollment (camera
-  or upload, with a reason for every rejected photo), memories, a visit timeline
-  with charts, and settings.
+The interface is designed like a **family photo album**, not a clinical
+dashboard: warm paper tones, serif headings, large framed photos, and gentle,
+pressure-free language. Photos act as conversation starters, and there are no
+right or wrong answers.
+
+- **Patient app** (tablet-first, three places only):
+  - **Home: "Who's visiting?"** A greeting, the date and time, and the
+    recognised visitor's photo, name, relationship and last visit. The last
+    conversation is shown with **Read aloud / Stop**, alongside a daily
+    featured memory and quick links to family. Six distinct recognition states
+    (recognised, not sure, unknown, nobody there, camera unavailable,
+    connection problem); no confidence numbers are ever shown to the patient.
+  - **Family:** a photo album of the people in the patient's life. Each person
+    has a page with their picture, who they are, when they last visited, and
+    their shared memories and photos.
+  - **Memories:** album cards (photo, story, date, people) that can be read
+    aloud, filtered by person, or viewed one at a time with **Look together**,
+    made for a carer and their loved one sharing a tablet.
+  - Recognition keeps running on every page. If someone arrives while the
+    patient is browsing, a calm banner says who is here instead of switching
+    pages.
+- **Caregiver workspace** (`/caregiver`): overview with system status, people
+  with enrollment status, guided face enrollment, **family photos** (caption,
+  story, date, who is in it, linked memory), profile pictures, memories, a
+  visit timeline with charts, and settings.
 
 ---
 
@@ -79,7 +95,8 @@ matter more here than in a generic face demo:
 ## Tech stack
 
 - **Frontend:** React 18 + TypeScript, Vite, Tailwind CSS, React Router,
-  Lucide icons, Recharts; Vitest + React Testing Library + axe-core, Playwright
+  Lucide icons, Recharts; Fraunces + Nunito Sans (self-hosted); Vitest + React
+  Testing Library + axe-core, Playwright
 - **Backend:** Python, Flask, SQLite (gunicorn + Docker in production)
 - **Vision:** OpenCV (YuNet detection + SFace recognition, ONNX models)
 - **Voice (optional):** Whisper (speech-to-text) + FFmpeg, pyttsx3 (spoken
@@ -178,10 +195,11 @@ worker.py              Recognition worker thread + state machine
 camera.py              Server webcam / browser frames → worker queue
 routes.py              Patient API, video stream, page routes, legacy forms
 api.py                 JSON API for the React app (session, caregiver data)
+album_api.py           Family photos + read-only patient album endpoints
 auth.py                Session gates, constant-time checks, login throttling
 frontend/              React + TypeScript app (see below)
 tests/                 pytest suite (backend)
-scripts/               Model downloader, standalone capture helper
+scripts/               Model downloader, capture helper, demo-data seeder
 aws/, Dockerfile       Deployment (see "Deploying to the cloud")
 ```
 
@@ -190,10 +208,49 @@ frontend/src/
   api/                 Typed client + response types for every endpoint
   components/ui/       Design system: Button, Card, Badge, Alert, fields,
                        Modal/ConfirmDialog, loading/empty/error states, Avatar
-  features/patient/    Patient screen, recognition view model, camera, speech
+  features/patient/    Patient app shell, recognition view model, camera, speech
+    album/             Family, person pages, memory album, Look together
   features/caregiver/  Caregiver layout and pages
   features/auth/       Caregiver and patient sign-in
 frontend/e2e/          Playwright tests (desktop, tablet, mobile)
+```
+
+---
+
+## Family album and reminiscence
+
+Family photos are stored separately from the **biometric** enrollment photos
+in `known_faces/`. The album adds two tables and changes nothing that already
+existed:
+
+| Table | Purpose |
+|---|---|
+| `photos` | id, caption, story, approximate date (free text), optional `memory_id` |
+| `photo_people` | who is in each photo (many-to-many) |
+
+A person's picture is their chosen profile photo (the previously unused
+`people.photo_path` column) or, by default, their first enrollment photo.
+
+- **Patient endpoints are read-only** (`/api/family`, `/api/family/<id>`,
+  `/api/album`) and sit behind the patient PIN. They return names,
+  relationships, descriptions, memory summaries, photo stories and visit
+  dates; never transcripts, recognition scores or enrollment photos.
+- **Uploads are re-encoded**: downscaled to 1600 px and saved as JPEG, which
+  removes EXIF metadata such as GPS location.
+- **Prompts are invitations, not tests**: "Would you like to hear about this
+  day?", "Shall we look at another?". The app never asks the patient to
+  recall a name or a fact.
+
+### Demo data
+
+For showing the app without real families, load clearly labelled demo
+records. Every name ends in "(demo)", the photos are synthetic scenery with no
+real faces, and no faces are enrolled:
+
+```bash
+python scripts/seed_demo.py            # add
+python scripts/seed_demo.py --remove   # remove everything it added
+# in Docker: docker compose -f docker-compose.aws.yml exec app python scripts/seed_demo.py
 ```
 
 ---

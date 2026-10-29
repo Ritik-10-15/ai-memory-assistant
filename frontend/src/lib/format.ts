@@ -52,7 +52,8 @@ export function titleCase(name: string | null | undefined): string {
 }
 
 export function initials(name: string | null | undefined): string {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  // Only words that start with a letter: "Priya Patel (demo)" → "PP", not "P(".
+  const parts = (name ?? "").trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
   const first = parts[0]?.[0] ?? "";
   const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
   return (first + last).toUpperCase() || "?";
