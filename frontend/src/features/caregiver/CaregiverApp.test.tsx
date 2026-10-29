@@ -21,6 +21,7 @@ const sarah: Person = {
   last_visit_at: "2026-10-20 14:30:00",
   photo_count: 6,
   embedding_count: 6,
+  profile_photo_id: null,
 };
 const john: Person = { ...sarah, id: "22222222-2222-4222-8222-222222222222", name: "John Smith", relationship: "Neighbour", notes: "", photo_count: 0, embedding_count: 0, memory_count: 0, visit_count: 0, last_visit_at: null };
 const memory: Memory = {

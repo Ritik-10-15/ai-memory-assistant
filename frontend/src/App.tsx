@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { Spinner } from "@/components/ui";
 import { CaregiverSignIn, PatientSignIn } from "@/features/auth/SignInPage";
 import { PatientScreen } from "@/features/patient/PatientScreen";
@@ -11,7 +11,7 @@ const CaregiverApp = lazy(() => import("@/features/caregiver/CaregiverApp"));
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<PatientScreen />} />
+      <Route path="/*" element={<PatientScreen />} />
       <Route path="/patient/login" element={<PatientSignIn />} />
       <Route path="/caregiver/login" element={<CaregiverSignIn />} />
       <Route
@@ -22,7 +22,6 @@ export function App() {
           </Suspense>
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

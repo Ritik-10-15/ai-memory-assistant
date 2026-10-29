@@ -8,7 +8,7 @@ type Size = "sm" | "md" | "lg" | "xl";
 const variants: Record<Variant, string> = {
   primary: "bg-primary-700 text-white hover:bg-primary-800 active:bg-ink",
   secondary: "border border-line bg-card text-ink hover:bg-primary-50 active:bg-primary-100",
-  accent: "bg-sage-600 text-white hover:bg-sage-700",
+  accent: "bg-clay-600 text-white hover:bg-clay-700",
   ghost: "text-ink hover:bg-primary-50",
   danger: "bg-danger-600 text-white hover:bg-danger-700",
 };

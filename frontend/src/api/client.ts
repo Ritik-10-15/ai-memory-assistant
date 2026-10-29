@@ -1,16 +1,22 @@
 import type {
+  Album,
   Analytics,
   AppStatus,
   CurrentPerson,
   EnrollCaptureResult,
+  FamilyMember,
+  FamilyMemberDetail,
+  FamilyPhoto,
   FrameResult,
   Memory,
   Person,
   PersonDetail,
   PersonInput,
+  PhotoDetailsInput,
   SavePersonResult,
   SessionInfo,
   Stats,
+  UploadPhotosResult,
   Visit,
 } from "./types";
 
@@ -130,6 +136,36 @@ export const api = {
 
   visits: (limit = 200) => request<Visit[]>("GET", `/api/caregiver/visits?limit=${limit}`),
   analytics: () => request<Analytics>("GET", "/api/caregiver/analytics"),
+
+  // Family album — patient read-only
+  family: () => request<FamilyMember[]>("GET", "/api/family"),
+  familyMember: (id: string) => request<FamilyMemberDetail>("GET", `/api/family/${encodeURIComponent(id)}`),
+  album: () => request<Album>("GET", "/api/album"),
+  photoUrl: (photoId: string) => `/api/photos/${encodeURIComponent(photoId)}/image`,
+
+  // Family album — caregiver management
+  photos: (personId?: string) =>
+    request<FamilyPhoto[]>(
+      "GET",
+      personId ? `/api/caregiver/photos?person_id=${encodeURIComponent(personId)}` : "/api/caregiver/photos",
+    ),
+  uploadPhotos: (files: File[], details: PhotoDetailsInput) => {
+    const form = new FormData();
+    files.forEach((f) => form.append("photos", f, f.name));
+    form.append("caption", details.caption);
+    form.append("story", details.story);
+    form.append("taken_on", details.taken_on);
+    if (details.memory_id !== null) form.append("memory_id", String(details.memory_id));
+    details.person_ids.forEach((id) => form.append("person_ids", id));
+    return request<UploadPhotosResult>("POST", "/api/caregiver/photos", form);
+  },
+  updatePhoto: (id: string, details: PhotoDetailsInput) =>
+    request<FamilyPhoto>("PUT", `/api/caregiver/photos/${encodeURIComponent(id)}`, { ...details }),
+  deletePhoto: (id: string) => request<{ ok: true }>("DELETE", `/api/caregiver/photos/${encodeURIComponent(id)}`),
+  setProfilePhoto: (personId: string, photoId: string | null) =>
+    request<{ ok: true }>("PUT", `/api/caregiver/people/${encodeURIComponent(personId)}/profile-photo`, {
+      photo_id: photoId,
+    }),
 
   enrollCapture: (personId: string, frame: Blob | null) => {
     const form = new FormData();

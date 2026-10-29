@@ -1,12 +1,20 @@
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import type { Page, Route } from "@playwright/test";
-import type { AppStatus, CurrentPerson, Person } from "../src/api/types";
+import type { Album, AppStatus, CurrentPerson, FamilyMember, Person } from "../src/api/types";
 import { idle, john, maybeSarah, sarah, unknownFace } from "../src/test/fixtures";
 
 export { idle, john, maybeSarah, sarah, unknownFace };
 
 const require = createRequire(import.meta.url);
 export const AXE_PATH = require.resolve("axe-core/axe.min.js");
+
+const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
+const IMAGES: Record<string, Buffer> = {
+  ["b".repeat(32)]: fixture("beach.jpg"),
+  ["g".repeat(32)]: fixture("garden.jpg"),
+  ["l".repeat(32)]: fixture("lunch.jpg"),
+};
 
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
@@ -34,6 +42,7 @@ export const people: Person[] = [
     last_visit_at: "2026-10-20 14:30:00",
     photo_count: 6,
     embedding_count: 6,
+    profile_photo_id: null,
   },
   {
     id: john.person_id!,
@@ -48,6 +57,7 @@ export const people: Person[] = [
     last_visit_at: null,
     photo_count: 0,
     embedding_count: 0,
+    profile_photo_id: null,
   },
 ];
 
@@ -101,7 +111,25 @@ export async function mockBackend(
           daily: [{ day: new Date().toISOString().slice(0, 10), visits: 1 }],
           memory_sources: [{ source: "manual", count: 2 }],
         });
+      case "GET /api/album":
+        return json(route, album);
+      case "GET /api/family":
+        return json(route, family);
       default:
+        if (url.pathname.startsWith("/api/family/")) {
+          const person = family.find((f) => url.pathname.endsWith(f.id));
+          if (!person) return json(route, { error: "Person not found." }, 404);
+          return json(route, {
+            person,
+            memories: album.memories.filter((m) => m.person_id === person.id),
+            photos: album.photos.filter((p) => p.people.some((x) => x.id === person.id)),
+            visits: { count: 5, recent: ["2026-10-20 14:30:00"] },
+          });
+        }
+        if (url.pathname.startsWith("/api/photos/")) {
+          const img = IMAGES[url.pathname.split("/")[3]];
+          return img ? route.fulfill({ body: img, contentType: "image/jpeg" }) : route.fulfill({ status: 404 });
+        }
         if (url.pathname.startsWith("/api/people/")) return route.fulfill({ status: 404 });
         return json(route, { error: "not mocked" }, 404);
     }
@@ -123,3 +151,36 @@ export async function runAxe(page: Page) {
     );
   });
 }
+
+export const family: FamilyMember[] = [
+  {
+    id: sarah.person_id!,
+    name: "Sarah Johnson",
+    relationship: "Daughter",
+    description: "Lives in Leeds with her two boys. Loves gardening.",
+    last_visit_at: "2026-10-20 14:30:00",
+    photo_count: 2,
+    recent_memory: { summary: "You talked about the roses in the back garden.", created_at: "2026-10-20 15:00:00" },
+  },
+  {
+    id: john.person_id!,
+    name: "John Smith",
+    relationship: "Neighbour",
+    description: "Lives next door. Brings the newspaper on Sundays.",
+    last_visit_at: null,
+    photo_count: 0,
+    recent_memory: { summary: "You watched the football together.", created_at: "2026-10-25 10:00:00" },
+  },
+];
+
+export const album: Album = {
+  memories: [
+    { id: 5, person_id: sarah.person_id!, person_name: "Sarah Johnson", relationship: "Daughter", summary: "You talked about the roses in the back garden. Sarah brought cuttings for the window box.", created_at: "2026-10-20 15:00:00", photo_id: "g".repeat(32) },
+    { id: 6, person_id: john.person_id!, person_name: "John Smith", relationship: "Neighbour", summary: "You watched the football together and John made tea.", created_at: "2026-10-25 10:00:00", photo_id: null },
+  ],
+  photos: [
+    { id: "b".repeat(32), caption: "Whitby beach", story: "A sunny day by the sea. We built a sandcastle and shared fish and chips on the harbour wall.", taken_on: "Summer 1998", memory_id: null, created_at: "2026-10-01 10:00:00", people: [{ id: sarah.person_id!, name: "Sarah Johnson" }] },
+    { id: "g".repeat(32), caption: "The rose garden", story: "", taken_on: "June 2026", memory_id: 5, created_at: "2026-10-20 15:05:00", people: [{ id: sarah.person_id!, name: "Sarah Johnson" }] },
+    { id: "l".repeat(32), caption: "Sunday lunch", story: "Roast dinner at the big table, with everyone home for the weekend.", taken_on: "Christmas 2019", memory_id: null, created_at: "2026-09-12 12:00:00", people: [] },
+  ],
+};

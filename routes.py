@@ -78,8 +78,12 @@ def patient_login():
 
 
 @app.route("/")
+@app.route("/family")
+@app.route("/family/<path:_sub>")
+@app.route("/memories")
 @patient_required
-def index():
+def index(_sub=None):
+    """Patient app pages (Home, Family, Memories) — routed client-side."""
     return spa()
 
 
