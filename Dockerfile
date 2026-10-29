@@ -1,3 +1,12 @@
+# ── Stage 1: build the React frontend ────────────────────────────────
+FROM node:20-alpine AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npx vite build
+
+# ── Stage 2: Flask app + recognition engine ──────────────────────────
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -20,6 +29,7 @@ COPY scripts/download_models.py scripts/
 RUN mkdir -p models && python scripts/download_models.py
 
 COPY . .
+COPY --from=frontend /frontend/dist ./frontend/dist
 
 # DB, enrolled faces, uploads and the embedding cache live here.
 # Mount a persistent volume at /data or they are lost on every redeploy.

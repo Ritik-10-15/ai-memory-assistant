@@ -33,9 +33,12 @@ export function RecallCard({ name, lastMemory, lastMemoryAt, earlier, supported,
   const when = formatRelativeDay(lastMemoryAt);
   return (
     <Card className={cn("px-6 py-6 sm:px-8", speaking && "ring-2 ring-brand-500")}>
-      <h3 className="flex items-center gap-2 text-xl font-semibold text-navy">
-        <MessageCircle className="h-6 w-6" aria-hidden="true" />
-        Last time you spoke{when && <span className="font-normal text-ink-muted">, {when}</span>}
+      <h3 className="flex items-start gap-2 text-xl font-semibold text-navy">
+        <MessageCircle className="mt-0.5 h-6 w-6 shrink-0" aria-hidden="true" />
+        <span>
+          Last time you spoke
+          {when && <span className="font-normal text-ink-muted">, {when}</span>}
+        </span>
       </h3>
       <p className="mt-3 whitespace-pre-line text-2xl leading-relaxed text-ink">{lastMemory}</p>
 

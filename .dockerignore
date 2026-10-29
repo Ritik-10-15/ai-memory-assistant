@@ -29,3 +29,9 @@ tests/
 .env.*
 aws/
 docker-compose*.yml
+
+# Frontend: dependencies and build output are produced inside the image
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/

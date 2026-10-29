@@ -39,12 +39,12 @@ export function StatTile({
   icon?: ReactNode;
 }) {
   return (
-    <Card className="p-5">
+    <Card className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-ink-muted">{label}</p>
-        {icon && <span className="text-brand-600">{icon}</span>}
+        {icon && <span className="hidden text-brand-600 sm:block">{icon}</span>}
       </div>
-      <p className="mt-2 text-3xl font-semibold tabular-nums text-navy">{value}</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-navy sm:text-3xl">{value}</p>
       {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
     </Card>
   );

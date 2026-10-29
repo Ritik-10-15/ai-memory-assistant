@@ -242,7 +242,7 @@ export function VisitsPage() {
           <Skeleton className="h-64 rounded-2xl" />
         ) : (
           <>
-            <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-3">
+            <div className="mb-5 grid grid-cols-3 gap-3 sm:gap-4">
               <StatTile label="Visits in period" value={filtered.length} />
               <StatTile label="Different visitors" value={new Set(filtered.map((v) => v.person_id)).size} />
               <StatTile
