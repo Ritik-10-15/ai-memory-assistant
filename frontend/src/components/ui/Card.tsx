@@ -2,7 +2,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-2xl border border-line bg-white shadow-card", className)} {...rest} />;
+  return <div className={cn("rounded-2xl border border-line bg-card shadow-card", className)} {...rest} />;
 }
 
 interface CardHeaderProps {
@@ -16,7 +16,7 @@ export function CardHeader({ title, description, action, as: Heading = "h2" }: C
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
       <div className="min-w-0">
-        <Heading className="text-base font-semibold text-navy">{title}</Heading>
+        <Heading className="text-base font-semibold text-ink">{title}</Heading>
         {description && <p className="mt-0.5 text-sm text-ink-muted">{description}</p>}
       </div>
       {action}

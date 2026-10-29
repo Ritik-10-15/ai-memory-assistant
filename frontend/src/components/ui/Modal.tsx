@@ -44,18 +44,18 @@ export function Modal({ open, title, description, onClose, children, footer }: M
       onClick={(e) => {
         if (e.target === ref.current) onClose(); // click on the backdrop
       }}
-      className="w-[min(92vw,30rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-raised backdrop:bg-navy-800/45"
+      className="w-[min(92vw,30rem)] rounded-2xl border border-line bg-card p-0 text-ink shadow-raised backdrop:bg-ink/45"
     >
       {open && (
         <div className="p-6">
           <div className="flex items-start justify-between gap-4">
-            <h2 id={titleId} className="text-lg font-semibold text-navy">
+            <h2 id={titleId} className="text-lg font-semibold text-ink">
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="-m-1 rounded-lg p-1 text-ink-muted hover:bg-canvas hover:text-ink"
+              className="-m-1 rounded-lg p-1 text-ink-muted hover:bg-paper hover:text-ink"
               aria-label="Close dialog"
             >
               <X className="h-5 w-5" aria-hidden="true" />

@@ -51,10 +51,10 @@ function PersonPicker() {
           <ul className="divide-y divide-line">
             {people.data.map((p) => (
               <li key={p.id}>
-                <Link to={`/caregiver/enroll/${p.id}`} className="flex items-center gap-4 px-5 py-4 hover:bg-canvas">
+                <Link to={`/caregiver/enroll/${p.id}`} className="flex items-center gap-4 px-5 py-4 hover:bg-paper">
                   <Avatar name={p.name} src={p.photo_count ? api.personPhotoUrl(p.id) : null} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-navy">{p.name}</p>
+                    <p className="truncate font-semibold text-ink">{p.name}</p>
                     <p className="truncate text-sm text-ink-muted">{p.relationship || "Relationship not set"}</p>
                   </div>
                   <EnrollmentBadge person={p} />
@@ -168,7 +168,7 @@ function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; camer
         }
       />
       <CardBody className="space-y-5">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-navy-800">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-ink">
           {cameraMode === "browser" ? (
             <video ref={videoRef} muted playsInline aria-label={`Camera preview for ${person.name}`} className="h-full w-full object-cover" />
           ) : (
@@ -185,7 +185,7 @@ function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; camer
 
         <div>
           <div className="flex items-center justify-between text-sm">
-            <span id="capture-progress-label" className="font-semibold text-navy">
+            <span id="capture-progress-label" className="font-semibold text-ink">
               Progress
             </span>
             <span className="tabular-nums text-ink-muted">
@@ -200,7 +200,7 @@ function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; camer
             aria-valuenow={Math.min(captured, CAPTURE_TARGET)}
             className="mt-2 h-2.5 overflow-hidden rounded-full bg-line"
           >
-            <div className="h-full rounded-full bg-care-500 transition-[width]" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-sage-600 transition-[width]" style={{ width: `${pct}%` }} />
           </div>
         </div>
 
@@ -338,7 +338,7 @@ export function EnrollmentPage() {
                   "Try a neutral face, a smile, and talking.",
                 ].map((tip) => (
                   <li key={tip} className="flex gap-2.5">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-care-500" aria-hidden="true" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-sage-600" aria-hidden="true" />
                     {tip}
                   </li>
                 ))}

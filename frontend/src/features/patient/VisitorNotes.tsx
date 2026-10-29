@@ -70,7 +70,7 @@ export function VisitorNotes({
         aria-expanded={open}
         aria-controls="visitor-notes"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl px-6 py-4 text-left text-lg font-semibold text-navy hover:bg-canvas sm:px-8"
+        className="flex w-full items-center justify-between gap-3 rounded-2xl px-6 py-4 text-left text-lg font-semibold text-ink hover:bg-paper sm:px-8"
       >
         <span className="flex items-center gap-2">
           <NotebookPen className="h-5 w-5" aria-hidden="true" />

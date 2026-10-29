@@ -38,15 +38,15 @@ function StatusCard({
   action?: ReactNode;
 }) {
   const toneClass = {
-    calm: "bg-brand-50 text-brand-600",
+    calm: "bg-primary-50 text-primary-700",
     caution: "bg-caution-50 text-caution-700",
-    neutral: "bg-canvas text-ink-muted",
+    neutral: "bg-paper text-ink-muted",
     problem: "bg-danger-50 text-danger-700",
   }[tone];
   return (
     <Card className="flex flex-col items-center px-6 py-12 text-center sm:px-10">
       <div className={cn("mb-6 flex h-20 w-20 items-center justify-center rounded-full", toneClass)}>{icon}</div>
-      <h2 className="text-3xl font-semibold leading-tight text-navy sm:text-4xl">{title}</h2>
+      <h2 className="text-3xl font-semibold leading-tight text-ink sm:text-4xl">{title}</h2>
       {children && <div className="mt-4 max-w-lg text-xl leading-relaxed text-ink">{children}</div>}
       {action && <div className="mt-8">{action}</div>}
     </Card>
@@ -140,14 +140,14 @@ export function VisitorPanel({ view, speech }: VisitorPanelProps) {
       return (
         <div className="space-y-5">
           <Card className="overflow-hidden">
-            <div className="h-1.5 bg-care-500" aria-hidden="true" />
+            <div className="h-1.5 bg-sage-600" aria-hidden="true" />
             <div className="flex flex-col items-center gap-6 px-6 py-8 text-center sm:flex-row sm:items-center sm:text-left">
-              <Avatar name={view.name} src={api.personPhotoUrl(view.personId)} size="xl" className="ring-4 ring-care-50" />
+              <Avatar name={view.name} src={api.personPhotoUrl(view.personId)} size="xl" className="ring-4 ring-sage-50" />
               <div className="min-w-0">
                 <Badge tone="success" icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} className="px-3 py-1 text-sm">
                   Recognised
                 </Badge>
-                <h2 className="mt-3 break-words text-4xl font-bold leading-tight text-navy sm:text-5xl">
+                <h2 className="mt-3 break-words text-4xl font-bold leading-tight text-ink sm:text-5xl">
                   This is {view.name}
                 </h2>
                 {relation && <p className="mt-2 text-2xl text-ink">{relation}</p>}

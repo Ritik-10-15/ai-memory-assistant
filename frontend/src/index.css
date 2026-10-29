@@ -1,4 +1,5 @@
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/nunito-sans";
+@import "@fontsource-variable/fraunces";
 
 @tailwind base;
 @tailwind components;
@@ -10,11 +11,25 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-canvas font-sans text-ink antialiased;
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+  /* Album-style headings: a warm serif for page and card titles. */
+  h1,
+  h2 {
+    @apply font-serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
   }
   /* One consistent, highly visible keyboard focus style (WCAG 2.4.7 / 2.4.13). */
   :focus-visible {
-    @apply outline outline-[3px] outline-offset-2 outline-brand-500;
+    @apply outline outline-[3px] outline-offset-2 outline-primary-600;
+  }
+}
+
+@layer components {
+  /* A printed-photo frame: soft white border and gentle shadow. */
+  .photo-frame {
+    @apply overflow-hidden rounded-2xl bg-card p-1.5 shadow-photo ring-1 ring-line;
   }
 }
 

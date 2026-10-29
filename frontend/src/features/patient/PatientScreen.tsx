@@ -27,7 +27,7 @@ function Clock() {
   }, []);
   return (
     <p className="text-right leading-tight">
-      <span className="block text-lg font-semibold text-navy sm:text-xl">
+      <span className="block text-lg font-semibold text-ink sm:text-xl">
         {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
       </span>
       <span className="block text-base text-ink-muted sm:text-lg">
@@ -113,20 +113,20 @@ export function PatientScreen() {
   const showNotes = notesTarget && (view.kind === "known" || notesBusy);
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-paper">
       <a
         href="#visitor"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-navy focus:shadow-raised"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:rounded-lg focus:bg-card focus:px-4 focus:py-2 focus:font-semibold focus:text-ink focus:shadow-raised"
       >
         Skip to visitor information
       </a>
-      <header className="border-b border-line bg-white">
+      <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-white">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-700 text-white">
               <HeartHandshake className="h-6 w-6" aria-hidden="true" />
             </span>
-            <h1 className="text-xl font-semibold text-navy sm:text-2xl">Memory Assistant</h1>
+            <h1 className="text-xl font-semibold text-ink sm:text-2xl">Memory Assistant</h1>
           </div>
           <Clock />
         </div>
@@ -163,7 +163,7 @@ export function PatientScreen() {
       </div>
 
       <footer className="mx-auto max-w-7xl px-4 pb-8 text-sm text-ink-muted sm:px-6">
-        <Link to="/caregiver" className="rounded font-medium text-brand-600 underline-offset-4 hover:underline">
+        <Link to="/caregiver" className="rounded font-medium text-primary-700 underline-offset-4 hover:underline">
           Caregiver sign-in
         </Link>
       </footer>

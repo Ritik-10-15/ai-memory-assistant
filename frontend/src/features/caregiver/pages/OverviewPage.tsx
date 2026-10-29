@@ -24,7 +24,7 @@ function StatusRow({ ok, label, detail }: { ok: boolean; label: string; detail: 
   return (
     <li className="flex items-start gap-3 py-2.5">
       {ok ? (
-        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-care-500" aria-hidden="true" />
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-sage-600" aria-hidden="true" />
       ) : (
         <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-caution-600" aria-hidden="true" />
       )}
@@ -113,7 +113,7 @@ export function OverviewPage() {
             title="Recent activity"
             description="Visits and saved memories, newest first."
             action={
-              <Link to="/caregiver/visits" className="text-sm font-semibold text-brand-600 hover:underline">
+              <Link to="/caregiver/visits" className="text-sm font-semibold text-primary-700 hover:underline">
                 Visit history
               </Link>
             }
@@ -185,7 +185,7 @@ export function OverviewPage() {
                       <span className="truncate font-medium text-ink">{p.name}</span>
                       <Link
                         to={`/caregiver/enroll/${p.id}`}
-                        className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline"
+                        className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary-700 hover:underline"
                       >
                         <ScanFace className="h-4 w-4" aria-hidden="true" />
                         Enroll<span className="sr-only"> {p.name}</span>

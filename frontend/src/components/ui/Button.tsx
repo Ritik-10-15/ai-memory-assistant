@@ -6,10 +6,10 @@ type Variant = "primary" | "secondary" | "accent" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg" | "xl";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-navy text-white hover:bg-navy-700 active:bg-navy-800",
-  secondary: "border border-line bg-white text-navy hover:bg-brand-50 active:bg-brand-100",
-  accent: "bg-care-500 text-white hover:bg-care-600",
-  ghost: "text-navy hover:bg-brand-50",
+  primary: "bg-primary-700 text-white hover:bg-primary-800 active:bg-ink",
+  secondary: "border border-line bg-card text-ink hover:bg-primary-50 active:bg-primary-100",
+  accent: "bg-sage-600 text-white hover:bg-sage-700",
+  ghost: "text-ink hover:bg-primary-50",
   danger: "bg-danger-600 text-white hover:bg-danger-700",
 };
 
@@ -24,7 +24,7 @@ const sizes: Record<Size, string> = {
 /** Shared button styling — also used by ButtonLink so links can look like buttons. */
 export function buttonClass(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex items-center justify-center rounded-xl font-semibold transition-colors",
+    "inline-flex items-center justify-center rounded-full font-semibold transition-colors",
     "disabled:cursor-not-allowed disabled:opacity-55",
     variants[variant],
     sizes[size],

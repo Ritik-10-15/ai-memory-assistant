@@ -6,9 +6,9 @@ import type { CameraStatus } from "./useBrowserCamera";
 import type { PatientView } from "./recognitionView";
 
 const BOX_COLORS: Record<string, string> = {
-  known: "#168365",
-  uncertain: "#B26A00",
-  unknown: "#5B6B7F",
+  known: "#2C6F6C",
+  uncertain: "#A86F0C",
+  unknown: "#675E56",
 };
 
 function boxLabel(view: PatientView): string {
@@ -19,13 +19,13 @@ function boxLabel(view: PatientView): string {
 }
 
 /** Draw the face box over an object-fit:cover <video>, mapping frame pixels to screen pixels. */
-function drawOverlay(canvas: HTMLCanvasElement, frame: FrameResult | null, view: PatientView) {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
+function drawOverlay(paper: HTMLCanvasElement, frame: FrameResult | null, view: PatientView) {
+  const w = paper.clientWidth;
+  const h = paper.clientHeight;
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
-  const ctx = canvas.getContext("2d");
+  paper.width = Math.round(w * dpr);
+  paper.height = Math.round(h * dpr);
+  const ctx = paper.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
@@ -37,7 +37,7 @@ function drawOverlay(canvas: HTMLCanvasElement, frame: FrameResult | null, view:
   const [bx, by, bw, bh] = frame.box;
   const x = bx * scale + ox;
   const y = by * scale + oy;
-  const color = BOX_COLORS[view.kind] ?? "#9AA8B8";
+  const color = BOX_COLORS[view.kind] ?? "#A89B8E";
 
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
@@ -47,7 +47,7 @@ function drawOverlay(canvas: HTMLCanvasElement, frame: FrameResult | null, view:
 
   const label = boxLabel(view);
   if (label) {
-    ctx.font = '600 16px "Inter Variable", Inter, system-ui, sans-serif';
+    ctx.font = '600 16px "Nunito Sans Variable", "Nunito Sans", system-ui, sans-serif';
     const tw = ctx.measureText(label).width;
     const ly = Math.max(0, y - 32);
     ctx.fillStyle = color;
@@ -101,7 +101,7 @@ export function CameraPanel({
 
   return (
     <section aria-label="Camera" className="flex flex-col gap-3">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-navy-800 shadow-card">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-ink shadow-card">
         {mode === "browser" && (
           <>
             <video
@@ -132,7 +132,7 @@ export function CameraPanel({
           </div>
         )}
         {chip && (
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-navy-800/75 px-3 py-1 text-sm font-medium text-white">
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-ink/75 px-3 py-1 text-sm font-medium text-white">
             {problem ? (
               <CameraOff className="h-4 w-4" aria-hidden="true" />
             ) : (

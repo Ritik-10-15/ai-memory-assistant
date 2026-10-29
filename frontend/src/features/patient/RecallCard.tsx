@@ -21,7 +21,7 @@ export function RecallCard({ name, lastMemory, lastMemoryAt, earlier, supported,
   if (!lastMemory) {
     return (
       <Card className="px-6 py-6 sm:px-8">
-        <h3 className="flex items-center gap-2 text-xl font-semibold text-navy">
+        <h3 className="flex items-center gap-2 text-xl font-semibold text-ink">
           <MessageCircle className="h-6 w-6" aria-hidden="true" />
           Last conversation
         </h3>
@@ -32,8 +32,8 @@ export function RecallCard({ name, lastMemory, lastMemoryAt, earlier, supported,
 
   const when = formatRelativeDay(lastMemoryAt);
   return (
-    <Card className={cn("px-6 py-6 sm:px-8", speaking && "ring-2 ring-brand-500")}>
-      <h3 className="flex items-start gap-2 text-xl font-semibold text-navy">
+    <Card className={cn("px-6 py-6 sm:px-8", speaking && "ring-2 ring-primary-600")}>
+      <h3 className="flex items-start gap-2 text-xl font-semibold text-ink">
         <MessageCircle className="mt-0.5 h-6 w-6 shrink-0" aria-hidden="true" />
         <span>
           Last time you spoke

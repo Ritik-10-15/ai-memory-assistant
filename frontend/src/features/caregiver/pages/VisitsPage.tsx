@@ -8,12 +8,12 @@ import { useAsync } from "@/hooks/useAsync";
 import { formatDate, formatDuration, formatShortDate, parseServerTime } from "@/lib/format";
 import { PageHeader, StatTile } from "../components";
 
-// Single-series charts: one validated mark color (brand-500, 4.7:1 on the
+// Single-series charts: one validated mark color (primary-600, 4.7:1 on the
 // white card), recessive grid/axes in muted ink, no legend (the title names
 // the series), hover tooltip, and a table view for every chart.
-const MARK = "#3478B4";
-const AXIS = "#5B6B7F";
-const GRID = "#E6EBF2";
+const MARK = "#2C6F6C";
+const AXIS = "#675E56";
+const GRID = "#EDE5DA";
 const RANGES = [7, 30, 90] as const;
 
 /** Fill in missing days so the chart shows quiet days as zero, not gaps. */
@@ -34,8 +34,8 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   if (!active || !payload?.length) return null;
   const n = payload[0].value;
   return (
-    <div className="rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-raised">
-      <p className="font-semibold text-navy">{label}</p>
+    <div className="rounded-lg border border-line bg-card px-3 py-2 text-sm shadow-raised">
+      <p className="font-semibold text-ink">{label}</p>
       <p className="text-ink">
         {n} visit{n === 1 ? "" : "s"}
       </p>
@@ -75,7 +75,7 @@ function DataTable({ headers, rows }: { headers: [string, string]; rows: Array<[
   return (
     <div className="max-h-72 overflow-auto">
       <table className="w-full text-left text-[15px]">
-        <thead className="sticky top-0 bg-white text-sm text-ink-muted">
+        <thead className="sticky top-0 bg-card text-sm text-ink-muted">
           <tr>
             <th scope="col" className="py-2 font-medium">{headers[0]}</th>
             <th scope="col" className="py-2 text-right font-medium">{headers[1]}</th>
@@ -127,7 +127,7 @@ export function VisitsPage() {
   const withDuration = filtered.filter((v) => v.duration_s > 0).length;
   const daily = analytics.data ? lastNDays(analytics.data.daily) : [];
   const perPerson = (analytics.data?.per_person ?? []).filter((p) => p.visits > 0).slice(0, 8);
-  const control = "block w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink";
+  const control = "block w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-[15px] text-ink";
 
   return (
     <>
@@ -137,7 +137,7 @@ export function VisitsPage() {
         actions={
           <a
             href="/caregiver/export/csv"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-4 text-[15px] font-semibold text-navy hover:bg-brand-50"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-card px-4 text-[15px] font-semibold text-ink hover:bg-primary-50"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             Export CSV
@@ -160,7 +160,7 @@ export function VisitsPage() {
                       <CartesianGrid stroke={GRID} vertical={false} />
                       <XAxis dataKey="label" tick={{ fill: AXIS, fontSize: 12 }} tickLine={false} axisLine={{ stroke: GRID }} interval={6} />
                       <YAxis allowDecimals={false} tick={{ fill: AXIS, fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(52,120,180,0.08)" }} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(44,111,108,0.08)" }} />
                       <Bar dataKey="visits" fill={MARK} radius={[4, 4, 0, 0]} maxBarSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -184,7 +184,7 @@ export function VisitsPage() {
                       <CartesianGrid stroke={GRID} horizontal={false} />
                       <XAxis type="number" allowDecimals={false} tick={{ fill: AXIS, fontSize: 12 }} tickLine={false} axisLine={false} />
                       <YAxis type="category" dataKey="name" width={110} tick={{ fill: AXIS, fontSize: 13 }} tickLine={false} axisLine={false} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(52,120,180,0.08)" }} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(44,111,108,0.08)" }} />
                       <Bar dataKey="visits" fill={MARK} radius={[0, 4, 4, 0]} maxBarSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -204,12 +204,12 @@ export function VisitsPage() {
       )}
 
       <section aria-labelledby="timeline-heading" className="mt-8">
-        <h2 id="timeline-heading" className="mb-4 text-lg font-semibold text-navy">
+        <h2 id="timeline-heading" className="mb-4 text-lg font-semibold text-ink">
           Timeline
         </h2>
         <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
           <div>
-            <label htmlFor="visit-person" className="mb-1.5 block text-sm font-semibold text-navy">
+            <label htmlFor="visit-person" className="mb-1.5 block text-sm font-semibold text-ink">
               Visitor
             </label>
             <select id="visit-person" className={control} value={person} onChange={(e) => setPerson(e.target.value)}>
@@ -222,7 +222,7 @@ export function VisitsPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="visit-range" className="mb-1.5 block text-sm font-semibold text-navy">
+            <label htmlFor="visit-range" className="mb-1.5 block text-sm font-semibold text-ink">
               Period
             </label>
             <select id="visit-range" className={control} value={range} onChange={(e) => setRange(Number(e.target.value) as typeof range)}>
