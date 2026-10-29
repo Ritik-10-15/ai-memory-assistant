@@ -31,11 +31,11 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center px-6 py-12 text-center">
       {icon && (
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-700">
           {icon}
         </div>
       )}
-      <p className="text-base font-semibold text-navy">{title}</p>
+      <p className="text-base font-semibold text-ink">{title}</p>
       {description && <p className="mt-1 max-w-sm text-sm text-ink-muted">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>

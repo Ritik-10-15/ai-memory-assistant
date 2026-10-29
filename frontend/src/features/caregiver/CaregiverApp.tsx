@@ -8,6 +8,7 @@ import { MemoriesPage } from "./pages/MemoriesPage";
 import { OverviewPage } from "./pages/OverviewPage";
 import { PeoplePage } from "./pages/PeoplePage";
 import { PersonEditorPage } from "./pages/PersonEditorPage";
+import { PhotosPage } from "./pages/PhotosPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { VisitsPage } from "./pages/VisitsPage";
 
@@ -53,6 +54,7 @@ export default function CaregiverApp() {
         <Route path="people/:id/edit" element={<PersonEditorRoute />} />
         <Route path="enroll" element={<EnrollmentPage />} />
         <Route path="enroll/:id" element={<EnrollmentPage />} />
+        <Route path="photos" element={<PhotosPage />} />
         <Route path="memories" element={<MemoriesPage />} />
         <Route path="visits" element={<VisitsPage />} />
         <Route path="analytics" element={<Navigate to="/caregiver/visits" replace />} />

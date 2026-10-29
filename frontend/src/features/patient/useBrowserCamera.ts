@@ -24,12 +24,12 @@ export async function openCamera(): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
 }
 
-export function grabJpeg(video: HTMLVideoElement, canvas: HTMLCanvasElement, quality = 0.8): Promise<Blob | null> {
+export function grabJpeg(video: HTMLVideoElement, paper: HTMLCanvasElement, quality = 0.8): Promise<Blob | null> {
   if (!video.videoWidth) return Promise.resolve(null);
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d")?.drawImage(video, 0, 0);
-  return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  paper.width = video.videoWidth;
+  paper.height = video.videoHeight;
+  paper.getContext("2d")?.drawImage(video, 0, 0);
+  return new Promise((resolve) => paper.toBlob(resolve, "image/jpeg", quality));
 }
 
 /**

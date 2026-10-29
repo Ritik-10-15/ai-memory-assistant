@@ -73,7 +73,7 @@ export function SettingsPage() {
               <p className="text-[15px] text-ink">Download every recorded visit as a spreadsheet (CSV).</p>
               <a
                 href="/caregiver/export/csv"
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-4 text-[15px] font-semibold text-navy hover:bg-brand-50"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-card px-4 text-[15px] font-semibold text-ink hover:bg-primary-50"
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
                 Export visits
@@ -86,15 +86,15 @@ export function SettingsPage() {
             <CardBody>
               <ul className="space-y-2 text-[15px] text-ink">
                 <li className="flex gap-2.5">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-care-500" aria-hidden="true" />
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sage-600" aria-hidden="true" />
                   Face photos, memories and visit records are stored only on this server.
                 </li>
                 <li className="flex gap-2.5">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-care-500" aria-hidden="true" />
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sage-600" aria-hidden="true" />
                   Camera video is analysed live and not recorded.
                 </li>
                 <li className="flex gap-2.5">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-care-500" aria-hidden="true" />
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sage-600" aria-hidden="true" />
                   Location data is removed from uploaded photos.
                 </li>
               </ul>

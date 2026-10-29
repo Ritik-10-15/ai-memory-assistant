@@ -7,9 +7,25 @@ const sizes = {
   md: "h-11 w-11 text-sm",
   lg: "h-16 w-16 text-lg",
   xl: "h-28 w-28 text-3xl",
+  "2xl": "h-40 w-40 text-5xl",
 };
 
-/** Person photo with an initials fallback (no photo, or it fails to load). */
+// Warm monogram tones (each pair ≥ 4.5:1). A person always gets the same
+// tone, so a familiar face keeps a familiar colour even without a photo.
+const TONES = [
+  "bg-clay-100 text-clay-700",
+  "bg-sage-100 text-sage-700",
+  "bg-sky-100 text-sky-700",
+  "bg-primary-100 text-primary-800",
+];
+
+export function toneFor(name: string): string {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return TONES[h % TONES.length];
+}
+
+/** Person photo with a warm monogram fallback (no photo, or it fails to load). */
 export function Avatar({
   name,
   src,
@@ -26,7 +42,8 @@ export function Avatar({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 font-semibold text-navy",
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-full font-serif font-semibold",
+        showImg ? "bg-paper" : toneFor(name),
         sizes[size],
         className,
       )}

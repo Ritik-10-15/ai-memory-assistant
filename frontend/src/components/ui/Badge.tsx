@@ -4,9 +4,9 @@ import { cn } from "@/lib/cn";
 export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "bg-canvas text-ink-muted border-line",
-  info: "bg-brand-50 text-brand-600 border-brand-100",
-  success: "bg-care-50 text-care-600 border-care-100",
+  neutral: "bg-paper text-ink-muted border-line",
+  info: "bg-primary-50 text-primary-700 border-primary-100",
+  success: "bg-sage-50 text-sage-700 border-sage-100",
   warning: "bg-caution-50 text-caution-700 border-caution-100",
   danger: "bg-danger-50 text-danger-700 border-danger-100",
 };

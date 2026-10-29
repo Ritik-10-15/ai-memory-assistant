@@ -13,6 +13,7 @@ from pathlib import Path
 DATA_DIR        = Path(os.environ.get("DATA_DIR", "."))
 KNOWN_FACES_DIR = DATA_DIR / "known_faces"
 UPLOADS_DIR     = DATA_DIR / "uploads"
+PHOTOS_DIR      = DATA_DIR / "photos"        # family photos (album)
 MODELS_DIR      = Path("models")
 DB_PATH         = str(DATA_DIR / "memory_v2.db")
 CAREGIVER_PASS  = os.environ.get("CAREGIVER_PASSWORD", "caregiver123")

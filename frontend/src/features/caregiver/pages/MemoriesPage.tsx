@@ -65,7 +65,7 @@ export function MemoryComposer({ personId, onAdded }: { personId: string; onAdde
           Save memory
         </Button>
         {done && (
-          <span role="status" className="text-sm font-medium text-care-600">
+          <span role="status" className="text-sm font-medium text-sage-700">
             Memory saved.
           </span>
         )}
@@ -110,10 +110,10 @@ export function MemoryList({
     <>
       <ul className="space-y-3">
         {memories.map((m) => (
-          <li key={m.id} className="rounded-xl border border-line bg-white p-4">
+          <li key={m.id} className="rounded-xl border border-line bg-card p-4">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
               {showPerson && (
-                <Link to={`/caregiver/people/${m.person_id}/edit`} className="font-semibold text-navy hover:underline">
+                <Link to={`/caregiver/people/${m.person_id}/edit`} className="font-semibold text-ink hover:underline">
                   {m.person_name}
                 </Link>
               )}
@@ -132,7 +132,7 @@ export function MemoryList({
             <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink">{m.summary}</p>
             {m.raw_transcript && m.raw_transcript !== m.summary && (
               <details className="mt-2 text-sm">
-                <summary className="cursor-pointer font-medium text-brand-600">Full transcript</summary>
+                <summary className="cursor-pointer font-medium text-primary-700">Full transcript</summary>
                 <p className="mt-1 whitespace-pre-line text-ink-muted">{m.raw_transcript}</p>
               </details>
             )}
@@ -178,7 +178,7 @@ export function MemoriesPage() {
   }, [memories.data, personFilter, query]);
 
   const select =
-    "block w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink";
+    "block w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-[15px] text-ink";
 
   return (
     <>
@@ -191,7 +191,7 @@ export function MemoriesPage() {
           </h2>
           <div className="mb-4 grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="memory-person" className="mb-1.5 block text-sm font-semibold text-navy">
+              <label htmlFor="memory-person" className="mb-1.5 block text-sm font-semibold text-ink">
                 Person
               </label>
               <select id="memory-person" className={select} value={personFilter} onChange={(e) => setPersonFilter(e.target.value)}>
@@ -204,7 +204,7 @@ export function MemoriesPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="memory-search" className="mb-1.5 block text-sm font-semibold text-navy">
+              <label htmlFor="memory-search" className="mb-1.5 block text-sm font-semibold text-ink">
                 Search
               </label>
               <div className="relative">
@@ -267,7 +267,7 @@ export function MemoriesPage() {
             ) : (
               <>
                 <div>
-                  <label htmlFor="composer-person" className="mb-1.5 block text-sm font-semibold text-navy">
+                  <label htmlFor="composer-person" className="mb-1.5 block text-sm font-semibold text-ink">
                     About
                   </label>
                   <select id="composer-person" className={select} value={composerFor} onChange={(e) => setComposerFor(e.target.value)}>

@@ -27,7 +27,7 @@ function renderScreen() {
   return render(
     <MemoryRouter initialEntries={["/"]}>
       <Routes>
-        <Route path="/" element={<PatientScreen />} />
+        <Route path="/*" element={<PatientScreen />} />
         <Route path="/patient/login" element={<p>PIN page</p>} />
       </Routes>
     </MemoryRouter>,
@@ -39,6 +39,8 @@ const visitor = () => document.getElementById("visitor")!;
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.spyOn(api, "status").mockResolvedValue(serverStatus);
+  vi.spyOn(api, "album").mockResolvedValue({ memories: [], photos: [] });
+  vi.spyOn(api, "family").mockResolvedValue([]);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -193,7 +195,7 @@ describe("PatientScreen accessibility", () => {
     installSpeechMock();
     scriptRecognition(detection);
     const { container } = renderScreen();
-    await screen.findByRole("heading", { level: 2 });
+    await screen.findByRole("heading", { level: 3 });
     vi.useRealTimers();
     expect(await axeViolations(container)).toEqual([]);
   });

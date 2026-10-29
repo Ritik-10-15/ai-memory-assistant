@@ -74,6 +74,8 @@ export interface Person {
   photo_count: number;
   /** Usable face embeddings in the live gallery — the real "enrolled" signal. */
   embedding_count: number;
+  /** Chosen family photo shown as their picture (null → first enrollment photo). */
+  profile_photo_id: string | null;
 }
 
 export interface Memory {
@@ -147,4 +149,72 @@ export interface PersonInput {
   notes: string;
   dob: string;
   tts_greeting: string;
+}
+
+// ── Family album (album_api.py) ─────────────────────────────────────
+
+export interface PhotoPerson {
+  id: string;
+  name: string;
+}
+
+/** A family photo (not a biometric enrollment photo). */
+export interface FamilyPhoto {
+  id: string;
+  caption: string;
+  story: string;
+  /** Free-form approximate date, e.g. "1998", "1998-07", "Summer 1998". */
+  taken_on: string;
+  memory_id: number | null;
+  created_at: string;
+  people: PhotoPerson[];
+}
+
+/** GET /api/family — what the patient sees about each person. */
+export interface FamilyMember {
+  id: string;
+  name: string;
+  relationship: string;
+  description: string;
+  last_visit_at: string | null;
+  photo_count: number;
+  recent_memory: { summary: string; created_at: string } | null;
+}
+
+/** A memory as shown to the patient: summary only, never the transcript. */
+export interface AlbumMemory {
+  id: number;
+  person_id: string;
+  person_name: string;
+  relationship: string;
+  summary: string;
+  created_at: string;
+  photo_id: string | null;
+}
+
+/** GET /api/family/<id> */
+export interface FamilyMemberDetail {
+  person: FamilyMember;
+  memories: AlbumMemory[];
+  photos: FamilyPhoto[];
+  visits: { count: number; recent: string[] };
+}
+
+/** GET /api/album */
+export interface Album {
+  memories: AlbumMemory[];
+  photos: FamilyPhoto[];
+}
+
+export interface PhotoDetailsInput {
+  caption: string;
+  story: string;
+  taken_on: string;
+  memory_id: number | null;
+  person_ids: string[];
+}
+
+export interface UploadPhotosResult {
+  photos: FamilyPhoto[];
+  rejected: Array<{ filename: string; status: "invalid_image" }>;
 }

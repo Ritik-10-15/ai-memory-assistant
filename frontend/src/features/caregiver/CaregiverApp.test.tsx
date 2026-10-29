@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { api, ApiError, UNAUTHORIZED_EVENT } from "@/api/client";
-import type { Memory, Person } from "@/api/types";
+import type { FamilyPhoto, Memory, Person } from "@/api/types";
 import { axeViolations } from "@/test/axe";
 import { serverStatus } from "@/test/fixtures";
 import CaregiverApp from "./CaregiverApp";
@@ -21,6 +21,7 @@ const sarah: Person = {
   last_visit_at: "2026-10-20 14:30:00",
   photo_count: 6,
   embedding_count: 6,
+  profile_photo_id: null,
 };
 const john: Person = { ...sarah, id: "22222222-2222-4222-8222-222222222222", name: "John Smith", relationship: "Neighbour", notes: "", photo_count: 0, embedding_count: 0, memory_count: 0, visit_count: 0, last_visit_at: null };
 const memory: Memory = {
@@ -41,6 +42,7 @@ function signedIn() {
   vi.spyOn(api, "visits").mockResolvedValue([]);
   vi.spyOn(api, "memories").mockResolvedValue([memory]);
   vi.spyOn(api, "analytics").mockResolvedValue({ per_person: [], daily: [], memory_sources: [] });
+  vi.spyOn(api, "photos").mockResolvedValue([]);
 }
 
 function renderAt(path: string) {
@@ -205,5 +207,100 @@ describe("memories", () => {
     renderAt("/caregiver/memories");
     expect(await screen.findByText("The server had a problem. Please try again.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+});
+
+const beachPhoto: FamilyPhoto = {
+  id: "a".repeat(32),
+  caption: "Whitby beach",
+  story: "A sunny day by the sea.",
+  taken_on: "Summer 1998",
+  memory_id: null,
+  created_at: "2026-10-01 10:00:00",
+  people: [{ id: sarah.id, name: sarah.name }],
+};
+
+describe("family photos", () => {
+  it("uploads photos with a caption, story, date and the people in them", async () => {
+    signedIn();
+    const upload = vi.spyOn(api, "uploadPhotos").mockResolvedValue({ photos: [beachPhoto], rejected: [] });
+    const user = userEvent.setup();
+    renderAt("/caregiver/photos");
+    expect(await screen.findByText("The album is empty")).toBeInTheDocument();
+
+    const file = new File(["jpeg"], "beach.jpg", { type: "image/jpeg" });
+    await user.upload(screen.getByLabelText("Photos"), file);
+    await user.type(screen.getByLabelText("Caption"), "Whitby beach");
+    await user.type(screen.getByLabelText("When (roughly)"), "Summer 1998");
+    await user.type(screen.getByLabelText("The story behind it"), "A sunny day by the sea.");
+    await user.click(screen.getByRole("checkbox", { name: /Sarah Johnson/ }));
+    await user.click(screen.getByRole("button", { name: "Add to album" }));
+
+    expect(upload).toHaveBeenCalledWith([file], {
+      caption: "Whitby beach",
+      story: "A sunny day by the sea.",
+      taken_on: "Summer 1998",
+      memory_id: null,
+      person_ids: [sarah.id],
+    });
+    expect(await screen.findByText("1 photo added to the album.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Whitby beach" })).toBeInTheDocument();
+  });
+
+  it("requires a photo before uploading", async () => {
+    signedIn();
+    const upload = vi.spyOn(api, "uploadPhotos");
+    const user = userEvent.setup();
+    renderAt("/caregiver/photos");
+    await user.click(await screen.findByRole("button", { name: "Add to album" }));
+    expect(screen.getByText("Choose at least one photo.")).toBeInTheDocument();
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("edits details, links a memory, and deletes only after confirmation", async () => {
+    signedIn();
+    vi.spyOn(api, "photos").mockResolvedValue([beachPhoto]);
+    const update = vi.spyOn(api, "updatePhoto").mockImplementation(async (_id, d) => ({ ...beachPhoto, caption: d.caption, memory_id: d.memory_id }));
+    const del = vi.spyOn(api, "deletePhoto").mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    renderAt("/caregiver/photos");
+
+    await user.click(await screen.findByRole("button", { name: "Edit Whitby beach" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit photo details" });
+    const caption = within(dialog).getByLabelText("Caption");
+    await user.clear(caption);
+    await user.type(caption, "Whitby harbour");
+    await user.selectOptions(within(dialog).getByLabelText(/Show with a memory/), String(memory.id));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(update).toHaveBeenCalledWith(beachPhoto.id, expect.objectContaining({ caption: "Whitby harbour", memory_id: memory.id }));
+    expect(await screen.findByRole("heading", { name: "Whitby harbour" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Delete Whitby harbour" }));
+    expect(del).not.toHaveBeenCalled();
+    await user.click(within(screen.getByRole("dialog", { name: "Delete this photo?" })).getByRole("button", { name: "Delete photo" }));
+    expect(del).toHaveBeenCalledWith(beachPhoto.id);
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Whitby harbour" })).not.toBeInTheDocument());
+  });
+
+  it("chooses a family photo as someone's profile picture", async () => {
+    signedIn();
+    vi.spyOn(api, "person").mockResolvedValue({ person: sarah, memories: [], visits: [] });
+    vi.spyOn(api, "photos").mockResolvedValue([beachPhoto]);
+    const setProfile = vi.spyOn(api, "setProfilePhoto").mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    renderAt(`/caregiver/people/${sarah.id}/edit`);
+    const choice = await screen.findByRole("button", { name: "Whitby beach" });
+    expect(choice).toHaveAttribute("aria-pressed", "false");
+    await user.click(choice);
+    expect(setProfile).toHaveBeenCalledWith(sarah.id, beachPhoto.id);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Whitby beach/ })).toHaveAttribute("aria-pressed", "true"));
+  });
+
+  it("has no detectable axe violations", async () => {
+    signedIn();
+    vi.spyOn(api, "photos").mockResolvedValue([beachPhoto]);
+    const { container } = renderAt("/caregiver/photos");
+    await screen.findByRole("heading", { name: "Whitby beach" });
+    expect(await axeViolations(container)).toEqual([]);
   });
 });

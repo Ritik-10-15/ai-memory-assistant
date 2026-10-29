@@ -10,7 +10,7 @@ test.describe("patient screen", () => {
     await expect(page.getByText("Recognised", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Read aloud" })).toBeVisible();
     // The real browser camera (fake device) is running and streaming frames.
-    await expect(page.getByText("Camera on")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Camera", exact: true }).getByText("Camera on")).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
     await page.screenshot({ path: `test-results/patient-known-${test.info().project.name}.png`, fullPage: true });
   });
@@ -64,9 +64,9 @@ test.describe("patient screen", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "This is Sarah Johnson" })).toBeVisible();
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("link", { name: "Skip to visitor information" })).toBeFocused();
+    await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
     const readAloud = page.getByRole("button", { name: "Read aloud" });
-    for (let i = 0; i < 6 && !(await readAloud.evaluate((el) => el === document.activeElement)); i++) {
+    for (let i = 0; i < 14 && !(await readAloud.evaluate((el) => el === document.activeElement)); i++) {
       await page.keyboard.press("Tab");
     }
     await expect(readAloud).toBeFocused();
@@ -78,9 +78,63 @@ test.describe("patient screen", () => {
     for (const state of [sarah, maybeSarah, unknownFace, idle]) {
       await mockBackend(page, { sequence: [state] });
       await page.goto("/");
-      await expect(page.locator("#visitor h2").first()).toBeVisible();
+      await expect(page.locator("#visitor h3").first()).toBeVisible();
       expect(await runAxe(page), `state ${state.state}`).toEqual([]);
       await page.unrouteAll({ behavior: "ignoreErrors" });
+    }
+  });
+
+  test("family album, a loved one's page, and memories to explore", async ({ page }) => {
+    await mockBackend(page, { sequence: [idle] });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Waiting for a visitor" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "A memory to enjoy" })).toBeVisible();
+    await page.screenshot({ path: `test-results/patient-home-${test.info().project.name}.png`, fullPage: true });
+
+    const nav = page.getByRole("navigation", { name: /^Main/ }).filter({ visible: true });
+    await nav.getByRole("link", { name: "Family" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Family and friends" })).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: `test-results/patient-family-${test.info().project.name}.png`, fullPage: true });
+
+    await page.getByRole("link", { name: /Sarah Johnson/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Sarah Johnson" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Memories with Sarah" })).toBeVisible();
+    await page.screenshot({ path: `test-results/patient-person-${test.info().project.name}.png`, fullPage: true });
+
+    await nav.getByRole("link", { name: "Memories" }).click();
+    await expect(page.getByRole("heading", { name: "Whitby beach" })).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: `test-results/patient-memories-${test.info().project.name}.png`, fullPage: true });
+
+    await page.getByRole("button", { name: "Look together" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("dialog").getByText("2 of 4")).toBeVisible();
+    await page.screenshot({ path: `test-results/patient-look-together-${test.info().project.name}.png` });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
+  test("a visitor arriving while browsing is announced gently", async ({ page }) => {
+    await mockBackend(page, { sequence: [idle, idle, sarah] });
+    await page.goto("/memories");
+    await expect(page.getByText("Sarah Johnson is here")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Memories" })).toBeVisible();
+    await page.getByRole("button", { name: "See who's visiting" }).click();
+    await expect(page.getByRole("heading", { name: "This is Sarah Johnson" })).toBeVisible();
+  });
+
+  test("no WCAG 2.2 AA violations on family and memories pages", async ({ page }) => {
+    await mockBackend(page, { sequence: [idle] });
+    for (const [path, heading] of [
+      ["/family", "Family and friends"],
+      [`/family/${sarah.person_id}`, "Memories with Sarah"],
+      ["/memories", "Whitby beach"],
+    ]) {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+      expect(await runAxe(page), path).toEqual([]);
     }
   });
 });

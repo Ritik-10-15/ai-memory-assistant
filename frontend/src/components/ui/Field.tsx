@@ -2,8 +2,8 @@ import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type Texta
 import { cn } from "@/lib/cn";
 
 const control =
-  "block w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink " +
-  "placeholder:text-ink-muted focus:border-brand-500 aria-[invalid=true]:border-danger-600";
+  "block w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-[15px] text-ink " +
+  "placeholder:text-ink-muted focus:border-primary-600 aria-[invalid=true]:border-danger-600";
 
 interface FieldShellProps {
   label: string;
@@ -17,7 +17,7 @@ interface FieldShellProps {
 function FieldShell({ label, hint, error, required, id, children }: FieldShellProps) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-semibold text-navy">
+      <label htmlFor={id} className="block text-sm font-semibold text-ink">
         {label}
         {required && (
           <span className="ml-0.5 text-danger-700" aria-hidden="true">

@@ -78,8 +78,12 @@ def patient_login():
 
 
 @app.route("/")
+@app.route("/family")
+@app.route("/family/<path:_sub>")
+@app.route("/memories")
 @patient_required
-def index():
+def index(_sub=None):
+    """Patient app pages (Home, Family, Memories) — routed client-side."""
     return spa()
 
 
@@ -298,6 +302,7 @@ def delete_person(pid):
             c.execute("DELETE FROM people WHERE id=?", (pid,))
             c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
             c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+            c.execute("DELETE FROM photo_people WHERE person_id=?", (pid,))
     # Only remove a folder that belongs to a real person: an arbitrary id
     # such as ".." would otherwise point outside known_faces/.
     d = config.KNOWN_FACES_DIR / pid

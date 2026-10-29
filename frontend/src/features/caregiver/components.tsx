@@ -19,7 +19,7 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold text-navy sm:text-[1.75rem]">{title}</h1>
+        <h1 className="text-2xl font-semibold text-ink sm:text-[1.75rem]">{title}</h1>
         {description && <p className="mt-1 max-w-2xl text-[15px] text-ink-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -42,9 +42,9 @@ export function StatTile({
     <Card className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-ink-muted">{label}</p>
-        {icon && <span className="hidden text-brand-600 sm:block">{icon}</span>}
+        {icon && <span className="hidden text-primary-700 sm:block">{icon}</span>}
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-navy sm:text-3xl">{value}</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-ink sm:text-3xl">{value}</p>
       {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
     </Card>
   );
@@ -103,7 +103,7 @@ export function PhotoResults({ results }: { results: PhotoResult[] }) {
   const rejected = results.filter((r) => r.status !== "accepted");
   return (
     <div role="status" className="space-y-2">
-      <p className="text-sm font-semibold text-navy">
+      <p className="text-sm font-semibold text-ink">
         {results.length - rejected.length} of {results.length} photo{results.length === 1 ? "" : "s"} added
       </p>
       {rejected.length > 0 && (
@@ -120,31 +120,43 @@ export function PhotoResults({ results }: { results: PhotoResult[] }) {
 }
 
 /** Multi-file image picker with thumbnail previews (object URLs are revoked). */
-export function PhotoPicker({ files, onChange }: { files: File[]; onChange: (files: File[]) => void }) {
+export function PhotoPicker({
+  files,
+  onChange,
+  label = "Face photos",
+  hint = "A few clear photos of this person alone, facing the camera. Each photo is checked for exactly one face.",
+  id = "photo-input",
+}: {
+  files: File[];
+  onChange: (files: File[]) => void;
+  label?: string;
+  hint?: string;
+  id?: string;
+}) {
   const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
 
   return (
     <div className="space-y-3">
       <div>
-        <label htmlFor="photo-input" className="block text-sm font-semibold text-navy">
-          Face photos
+        <label htmlFor={id} className="block text-sm font-semibold text-ink">
+          {label}
         </label>
-        <p id="photo-hint" className="mt-0.5 text-sm text-ink-muted">
-          A few clear photos of this person alone, facing the camera. Each photo is checked for exactly one face.
+        <p id={`${id}-hint`} className="mt-0.5 text-sm text-ink-muted">
+          {hint}
         </p>
       </div>
       <input
-        id="photo-input"
+        id={id}
         type="file"
         accept="image/jpeg,image/png"
         multiple
-        aria-describedby="photo-hint"
+        aria-describedby={`${id}-hint`}
         onChange={(e) => {
           onChange([...files, ...Array.from(e.target.files ?? [])]);
           e.target.value = "";
         }}
-        className="block w-full text-sm text-ink-muted file:mr-3 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-2 file:font-semibold file:text-navy hover:file:bg-brand-50"
+        className="block w-full text-sm text-ink-muted file:mr-3 file:rounded-lg file:border file:border-line file:bg-card file:px-3 file:py-2 file:font-semibold file:text-ink hover:file:bg-primary-50"
       />
       {files.length > 0 && (
         <ul className="flex flex-wrap gap-3" aria-label="Selected photos">
@@ -154,7 +166,7 @@ export function PhotoPicker({ files, onChange }: { files: File[]; onChange: (fil
               <button
                 type="button"
                 onClick={() => onChange(files.filter((_, j) => j !== i))}
-                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-line bg-white text-sm font-bold text-ink-muted shadow-card hover:text-danger-700"
+                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-line bg-card text-sm font-bold text-ink-muted shadow-card hover:text-danger-700"
                 aria-label={`Remove ${f.name}`}
               >
                 ×

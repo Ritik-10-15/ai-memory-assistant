@@ -20,11 +20,11 @@ export function RecallCard({ name, lastMemory, lastMemoryAt, earlier, supported,
   const first = name.split(" ")[0];
   if (!lastMemory) {
     return (
-      <Card className="px-6 py-6 sm:px-8">
-        <h3 className="flex items-center gap-2 text-xl font-semibold text-navy">
+      <Card className="rounded-3xl px-6 py-6 sm:px-8">
+        <h4 className="flex items-center gap-2 text-xl font-semibold text-ink">
           <MessageCircle className="h-6 w-6" aria-hidden="true" />
           Last conversation
-        </h3>
+        </h4>
         <p className="mt-2 text-xl text-ink-muted">There's no saved conversation with {first} yet.</p>
       </Card>
     );
@@ -32,14 +32,14 @@ export function RecallCard({ name, lastMemory, lastMemoryAt, earlier, supported,
 
   const when = formatRelativeDay(lastMemoryAt);
   return (
-    <Card className={cn("px-6 py-6 sm:px-8", speaking && "ring-2 ring-brand-500")}>
-      <h3 className="flex items-start gap-2 text-xl font-semibold text-navy">
+    <Card className={cn("rounded-3xl px-6 py-6 sm:px-8", speaking && "ring-2 ring-primary-600")}>
+      <h4 className="flex items-start gap-2 text-xl font-semibold text-ink">
         <MessageCircle className="mt-0.5 h-6 w-6 shrink-0" aria-hidden="true" />
         <span>
           Last time you spoke
           {when && <span className="font-normal text-ink-muted">, {when}</span>}
         </span>
-      </h3>
+      </h4>
       <p className="mt-3 whitespace-pre-line text-2xl leading-relaxed text-ink">{lastMemory}</p>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -63,7 +63,7 @@ export function RecallCard({ name, lastMemory, lastMemoryAt, earlier, supported,
 
       {earlier.length > 0 && (
         <div className="mt-6 border-t border-line pt-5">
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">Earlier conversations</h4>
+          <h5 className="text-sm font-bold uppercase tracking-wide text-ink-muted">Earlier conversations</h5>
           <ul className="mt-2 space-y-3">
             {earlier.map((m, i) => (
               <li key={`${m.when}-${i}`} className="text-lg leading-relaxed text-ink">

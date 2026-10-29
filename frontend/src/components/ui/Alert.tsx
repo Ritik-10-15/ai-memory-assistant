@@ -5,8 +5,8 @@ import { cn } from "@/lib/cn";
 type Tone = "info" | "success" | "warning" | "error";
 
 const styles: Record<Tone, { box: string; Icon: typeof Info }> = {
-  info: { box: "border-brand-100 bg-brand-50 text-navy", Icon: Info },
-  success: { box: "border-care-100 bg-care-50 text-care-600", Icon: CheckCircle2 },
+  info: { box: "border-primary-100 bg-primary-50 text-ink", Icon: Info },
+  success: { box: "border-sage-100 bg-sage-50 text-sage-700", Icon: CheckCircle2 },
   warning: { box: "border-caution-100 bg-caution-50 text-caution-700", Icon: AlertTriangle },
   error: { box: "border-danger-100 bg-danger-50 text-danger-700", Icon: XCircle },
 };

@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import {
   CalendarClock,
   HeartHandshake,
+  Images,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -20,6 +21,7 @@ const NAV = [
   { to: "/caregiver", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/caregiver/people", label: "Registered people", icon: Users },
   { to: "/caregiver/enroll", label: "Face enrollment", icon: ScanFace },
+  { to: "/caregiver/photos", label: "Family photos", icon: Images },
   { to: "/caregiver/memories", label: "Memories", icon: MessageSquareText },
   { to: "/caregiver/visits", label: "Visit history", icon: CalendarClock },
   { to: "/caregiver/settings", label: "Settings", icon: Settings },
@@ -37,7 +39,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-colors",
-                isActive ? "bg-white/15 text-white" : "text-white/80 hover:bg-white/10 hover:text-white",
+                isActive ? "bg-primary-50 font-semibold text-primary-800" : "text-ink hover:bg-paper",
               )
             }
           >
@@ -52,10 +54,10 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 function SidebarFooter({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <div className="space-y-1 border-t border-white/15 pt-4">
+    <div className="space-y-1 border-t border-line pt-4">
       <Link
         to="/"
-        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-white/80 hover:bg-white/10 hover:text-white"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-ink hover:bg-paper"
       >
         <MonitorSmartphone className="h-5 w-5" aria-hidden="true" />
         Patient screen
@@ -63,7 +65,7 @@ function SidebarFooter({ onSignOut }: { onSignOut: () => void }) {
       <button
         type="button"
         onClick={onSignOut}
-        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-white/80 hover:bg-white/10 hover:text-white"
+        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-ink hover:bg-paper"
       >
         <LogOut className="h-5 w-5" aria-hidden="true" />
         Sign out
@@ -75,12 +77,12 @@ function SidebarFooter({ onSignOut }: { onSignOut: () => void }) {
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-navy">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-700 text-white">
         <HeartHandshake className="h-6 w-6" aria-hidden="true" />
       </span>
       <div className="leading-tight">
-        <p className="font-semibold text-white">Memory Assistant</p>
-        <p className="text-sm text-white/70">Caregiver workspace</p>
+        <p className="font-serif text-lg font-semibold text-ink">Memory Assistant</p>
+        <p className="text-sm text-ink-muted">Caregiver workspace</p>
       </div>
     </div>
   );
@@ -103,16 +105,17 @@ export function CaregiverLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+    <div className="min-h-screen bg-paper lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-navy"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-card focus:px-4 focus:py-2 focus:font-semibold focus:text-ink"
       >
         Skip to content
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen flex-col gap-8 bg-navy px-4 py-6 lg:flex">
+      <div className="hidden border-r border-line bg-card lg:block">
+      <aside className="sticky top-0 flex h-screen flex-col gap-8 px-4 py-6">
         <div className="px-2">
           <Brand />
         </div>
@@ -121,9 +124,10 @@ export function CaregiverLayout() {
         </nav>
         <SidebarFooter onSignOut={signOut} />
       </aside>
+      </div>
 
       {/* Mobile / tablet top bar */}
-      <header className="sticky top-0 z-30 bg-navy px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-line bg-card px-4 py-3 lg:hidden">
         <div className="flex items-center justify-between">
           <Brand />
           <button
@@ -131,7 +135,7 @@ export function CaregiverLayout() {
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
             onClick={() => setMenuOpen((o) => !o)}
-            className="rounded-xl p-2 text-white hover:bg-white/10"
+            className="rounded-xl p-2 text-ink hover:bg-paper"
           >
             {menuOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
             <span className="sr-only">{menuOpen ? "Close menu" : "Open menu"}</span>

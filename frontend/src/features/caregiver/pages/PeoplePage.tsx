@@ -18,9 +18,9 @@ function PersonCard({ person, onDelete }: { person: Person; onDelete: () => void
   return (
     <Card className="flex flex-col">
       <div className="flex items-start gap-4 p-5">
-        <Avatar name={person.name} src={person.photo_count ? api.personPhotoUrl(person.id) : null} size="lg" />
+        <Avatar name={person.name} src={person.photo_count || person.profile_photo_id ? api.personPhotoUrl(person.id, person.profile_photo_id) : null} size="lg" />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-semibold text-navy">
+          <h2 className="truncate text-lg font-semibold text-ink">
             <Link to={`/caregiver/people/${person.id}/edit`} className="hover:underline">
               {person.name}
             </Link>
@@ -121,7 +121,7 @@ export function PeoplePage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name, relationship or notes"
-          className="block w-full rounded-xl border border-line bg-white py-2.5 pl-11 pr-3.5 text-[15px] placeholder:text-ink-muted"
+          className="block w-full rounded-xl border border-line bg-card py-2.5 pl-11 pr-3.5 text-[15px] placeholder:text-ink-muted"
         />
       </div>
 

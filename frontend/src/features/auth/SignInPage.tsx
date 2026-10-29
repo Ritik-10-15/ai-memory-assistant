@@ -11,16 +11,16 @@ const QUERY_ERRORS: Record<string, string> = {
 
 function Shell({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
+    <main className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-white">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-700 text-white">
             <HeartHandshake className="h-6 w-6" aria-hidden="true" />
           </span>
-          <span className="text-xl font-semibold text-navy">Memory Assistant</span>
+          <span className="text-xl font-semibold text-ink">Memory Assistant</span>
         </div>
         <Card className="p-7 sm:p-8">
-          <h1 className="text-2xl font-semibold text-navy">{title}</h1>
+          <h1 className="text-2xl font-semibold text-ink">{title}</h1>
           <p className="mt-1.5 text-[15px] text-ink-muted">{description}</p>
           <div className="mt-6">{children}</div>
         </Card>
@@ -88,7 +88,7 @@ export function CaregiverSignIn() {
           Sign in
         </Button>
       </form>
-      <Link to="/" className="mt-6 inline-block text-sm font-medium text-brand-600 underline-offset-4 hover:underline">
+      <Link to="/" className="mt-6 inline-block text-sm font-medium text-primary-700 underline-offset-4 hover:underline">
         Back to the patient screen
       </Link>
     </Shell>
@@ -122,7 +122,7 @@ export function PatientSignIn() {
           Continue
         </Button>
       </form>
-      <Link to="/caregiver/login" className="mt-6 inline-block text-sm font-medium text-brand-600 underline-offset-4 hover:underline">
+      <Link to="/caregiver/login" className="mt-6 inline-block text-sm font-medium text-primary-700 underline-offset-4 hover:underline">
         Caregiver sign-in
       </Link>
     </Shell>

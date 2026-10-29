@@ -9,11 +9,11 @@ import {
   UserRound,
   WifiOff,
 } from "lucide-react";
-import { api } from "@/api/client";
-import { Avatar, Badge, Button, Card } from "@/components/ui";
+import { Badge, Button, Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatRelativeDay } from "@/lib/format";
 import type { CameraProblem, PatientView } from "./recognitionView";
+import { PersonPhoto } from "./album/pieces";
 import { RecallCard } from "./RecallCard";
 
 /** "Daughter" → "Your daughter"; leaves "My …"/"Your …" phrasing alone. */
@@ -38,15 +38,15 @@ function StatusCard({
   action?: ReactNode;
 }) {
   const toneClass = {
-    calm: "bg-brand-50 text-brand-600",
+    calm: "bg-primary-50 text-primary-700",
     caution: "bg-caution-50 text-caution-700",
-    neutral: "bg-canvas text-ink-muted",
+    neutral: "bg-paper text-ink-muted",
     problem: "bg-danger-50 text-danger-700",
   }[tone];
   return (
-    <Card className="flex flex-col items-center px-6 py-12 text-center sm:px-10">
+    <Card className="flex flex-col items-center rounded-3xl px-6 py-12 text-center sm:px-10">
       <div className={cn("mb-6 flex h-20 w-20 items-center justify-center rounded-full", toneClass)}>{icon}</div>
-      <h2 className="text-3xl font-semibold leading-tight text-navy sm:text-4xl">{title}</h2>
+      <h3 className="font-serif text-3xl font-semibold leading-tight text-ink sm:text-4xl">{title}</h3>
       {children && <div className="mt-4 max-w-lg text-xl leading-relaxed text-ink">{children}</div>}
       {action && <div className="mt-8">{action}</div>}
     </Card>
@@ -139,18 +139,17 @@ export function VisitorPanel({ view, speech }: VisitorPanelProps) {
       const lastVisit = formatRelativeDay(view.lastVisitAt);
       return (
         <div className="space-y-5">
-          <Card className="overflow-hidden">
-            <div className="h-1.5 bg-care-500" aria-hidden="true" />
-            <div className="flex flex-col items-center gap-6 px-6 py-8 text-center sm:flex-row sm:items-center sm:text-left">
-              <Avatar name={view.name} src={api.personPhotoUrl(view.personId)} size="xl" className="ring-4 ring-care-50" />
+          <Card className="overflow-hidden rounded-3xl">
+            <div className="flex flex-col items-center gap-6 px-6 py-8 text-center sm:flex-row sm:items-center sm:gap-8 sm:text-left">
+              <PersonPhoto id={view.personId} name={view.name} className="w-44 shrink-0 sm:w-52" />
               <div className="min-w-0">
                 <Badge tone="success" icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} className="px-3 py-1 text-sm">
                   Recognised
                 </Badge>
-                <h2 className="mt-3 break-words text-4xl font-bold leading-tight text-navy sm:text-5xl">
+                <h3 className="mt-3 break-words font-serif text-4xl font-semibold leading-tight text-ink sm:text-5xl">
                   This is {view.name}
-                </h2>
-                {relation && <p className="mt-2 text-2xl text-ink">{relation}</p>}
+                </h3>
+                {relation && <p className="mt-2 text-2xl text-primary-700">{relation}</p>}
                 {lastVisit && (
                   <p className="mt-3 text-lg text-ink-muted">
                     You last saw {view.name.split(" ")[0]} {lastVisit}.
@@ -160,7 +159,7 @@ export function VisitorPanel({ view, speech }: VisitorPanelProps) {
             </div>
             {view.notes && (
               <div className="border-t border-line px-6 py-5 sm:px-8">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">About {view.name.split(" ")[0]}</h3>
+                <h4 className="text-sm font-bold uppercase tracking-wide text-ink-muted">About {view.name.split(" ")[0]}</h4>
                 <p className="mt-1.5 text-xl leading-relaxed text-ink">{view.notes}</p>
               </div>
             )}

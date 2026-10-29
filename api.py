@@ -21,6 +21,7 @@ import services
 from app_instance import app
 from auth import (caregiver_required, patient_required, secret_matches,
                   retry_after, record_failure, clear_failures)
+from album_api import profile_photo_file
 from database import get_db
 from vision import (assess_enrollment_photo, gallery_counts, load_known_faces,
                     models_loaded)
@@ -127,9 +128,12 @@ def api_status():
 @app.route("/api/people/<pid>/photo")
 @patient_required
 def api_person_photo(pid):
-    """First enrollment photo of a person, for the visitor card / avatars.
-    Behind the same sign-in as the patient screen; never cached publicly."""
-    files = _photo_files(pid)
+    """A person's picture for the visitor card / avatars: their chosen
+    profile photo (a family photo) if set, else their first enrollment
+    photo. Behind the same sign-in as the patient screen; never cached
+    publicly."""
+    chosen = profile_photo_file(pid) if _UUID_RE.match(pid or "") else None
+    files = [chosen] if chosen else _photo_files(pid)
     if not files:
         return _error("No photo", 404)
     resp = send_file(files[0], max_age=300)
@@ -161,6 +165,7 @@ def _person_json(row, counts):
         "visit_count": row["visit_count"],
         "last_visit_at": row["last_visit_at"],
         "photo_count": len(_photo_files(pid)),
+        "profile_photo_id": row["photo_path"],
         "embedding_count": counts.get(pid, 0),
     }
 
@@ -292,6 +297,7 @@ def api_delete_person(pid):
         c.execute("DELETE FROM people WHERE id=?", (pid,))
         c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
         c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+        c.execute("DELETE FROM photo_people WHERE person_id=?", (pid,))
     d = _face_dir(pid)
     if d is not None and d.exists():
         shutil.rmtree(d)

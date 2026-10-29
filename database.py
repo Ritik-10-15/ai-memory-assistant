@@ -45,5 +45,22 @@ def init_db():
             message TEXT, seen INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+        -- Family photos for reminiscence (separate from the biometric
+        -- enrollment photos in known_faces/). Additive: existing tables
+        -- are untouched; people.photo_path may point at one of these ids
+        -- as the person's chosen profile photo.
+        CREATE TABLE IF NOT EXISTS photos (
+            id TEXT PRIMARY KEY, filename TEXT NOT NULL,
+            caption TEXT, story TEXT, taken_on TEXT,
+            memory_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(memory_id) REFERENCES memories(id)
+        );
+        CREATE TABLE IF NOT EXISTS photo_people (
+            photo_id TEXT NOT NULL, person_id TEXT NOT NULL,
+            PRIMARY KEY (photo_id, person_id),
+            FOREIGN KEY(photo_id) REFERENCES photos(id),
+            FOREIGN KEY(person_id) REFERENCES people(id)
+        );
         """)
     print("✅ Database ready")
