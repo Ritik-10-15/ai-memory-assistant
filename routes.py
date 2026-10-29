@@ -298,6 +298,7 @@ def delete_person(pid):
             c.execute("DELETE FROM people WHERE id=?", (pid,))
             c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
             c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+            c.execute("DELETE FROM photo_people WHERE person_id=?", (pid,))
     # Only remove a folder that belongs to a real person: an arbitrary id
     # such as ".." would otherwise point outside known_faces/.
     d = config.KNOWN_FACES_DIR / pid

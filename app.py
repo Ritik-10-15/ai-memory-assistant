@@ -12,7 +12,8 @@ from database import init_db
 from vision import load_models, load_known_faces
 from worker import start_worker
 import routes  # noqa: F401  (import registers every route on `app`)
-import api     # noqa: F401  (JSON API for the React frontend)
+import api        # noqa: F401  (JSON API for the React frontend)
+import album_api  # noqa: F401  (family photos + patient reminiscence)
 
 
 def startup():
@@ -21,6 +22,7 @@ def startup():
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
     config.KNOWN_FACES_DIR.mkdir(exist_ok=True)
     config.UPLOADS_DIR.mkdir(exist_ok=True)
+    config.PHOTOS_DIR.mkdir(exist_ok=True)
     config.MODELS_DIR.mkdir(exist_ok=True)
 
     init_db()

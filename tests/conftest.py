@@ -26,6 +26,7 @@ def isolated_files(tmp_path, monkeypatch):
     (dist / "index.html").write_text('<!doctype html><div id="root"></div>')
     monkeypatch.setattr(config, "FRONTEND_DIST", dist)
     monkeypatch.setattr(config, "KNOWN_FACES_DIR", tmp_path / "known_faces")
+    monkeypatch.setattr(config, "PHOTOS_DIR", tmp_path / "photos")
     monkeypatch.setattr(config, "GALLERY_CACHE", tmp_path / "gallery_cache.npz")
     auth._failures.clear()
     yield
