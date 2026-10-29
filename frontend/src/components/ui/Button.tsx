@@ -21,6 +21,17 @@ const sizes: Record<Size, string> = {
   xl: "min-h-16 px-7 text-xl gap-3",
 };
 
+/** Shared button styling — also used by ButtonLink so links can look like buttons. */
+export function buttonClass(variant: Variant = "primary", size: Size = "md", className?: string) {
+  return cn(
+    "inline-flex items-center justify-center rounded-xl font-semibold transition-colors",
+    "disabled:cursor-not-allowed disabled:opacity-55",
+    variants[variant],
+    sizes[size],
+    className,
+  );
+}
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
@@ -38,13 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(
-        "inline-flex items-center justify-center rounded-xl font-semibold transition-colors",
-        "disabled:cursor-not-allowed disabled:opacity-55",
-        variants[variant],
-        sizes[size],
-        className,
-      )}
+      className={buttonClass(variant, size, className)}
       {...rest}
     >
       {loading ? <Loader2 className="h-[1.1em] w-[1.1em] animate-spin" aria-hidden="true" /> : icon}
@@ -52,3 +57,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     </button>
   );
 });
+
+export type ButtonVariant = Variant;
+export type ButtonSize = Size;

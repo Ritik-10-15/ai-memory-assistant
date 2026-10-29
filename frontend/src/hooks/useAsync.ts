@@ -5,7 +5,7 @@ export interface AsyncState<T> {
   error: Error | null;
   loading: boolean;
   reload: () => void;
-  setData: (updater: T | ((prev: T | undefined) => T)) => void;
+  setData: (updater: T | undefined | ((prev: T | undefined) => T | undefined)) => void;
 }
 
 /**
@@ -41,8 +41,10 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []): Asy
   }, [nonce, ...deps]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
-  const setData = useCallback((updater: T | ((prev: T | undefined) => T)) => {
-    setDataState((prev) => (typeof updater === "function" ? (updater as (p: T | undefined) => T)(prev) : updater));
+  const setData = useCallback((updater: T | undefined | ((prev: T | undefined) => T | undefined)) => {
+    setDataState((prev) =>
+      typeof updater === "function" ? (updater as (p: T | undefined) => T | undefined)(prev) : updater,
+    );
   }, []);
 
   return { data, error, loading, reload, setData };

@@ -13,6 +13,17 @@ afterEach(() => {
 HTMLCanvasElement.prototype.toBlob = function toBlob(cb: BlobCallback) {
   cb(new Blob(["frame"], { type: "image/jpeg" }));
 };
+if (!URL.createObjectURL) {
+  URL.createObjectURL = () => "blob:preview";
+  URL.revokeObjectURL = () => undefined;
+}
+if (!("ResizeObserver" in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}
 HTMLMediaElement.prototype.play = function play() {
   return Promise.resolve();
 };
