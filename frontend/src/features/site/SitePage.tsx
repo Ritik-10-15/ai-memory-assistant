@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { DemoAlbums } from "./demo/DemoAlbums";
 import { DemoExperience } from "./demo/DemoExperience";
 import { About, Features, Hero, HowItWorks, SiteFooter } from "./Sections";
 import { SiteNav } from "./SiteNav";
@@ -28,6 +29,7 @@ export default function SitePage() {
         <HowItWorks />
         <Features />
         <DemoExperience />
+        <DemoAlbums />
         <About />
       </main>
       <SiteFooter />

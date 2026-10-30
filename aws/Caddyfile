@@ -15,5 +15,9 @@
 		}
 	}
 	encode gzip
-	reverse_proxy app:8000
+	# Don't advertise server software (the app's own or Caddy's).
+	header -Server
+	reverse_proxy app:8000 {
+		header_down -Server
+	}
 }

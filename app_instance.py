@@ -4,11 +4,18 @@ app_instance.py — creates the Flask app object only.
 Kept separate from app.py so routes.py can `from app_instance import app`
 without circularly importing app.py itself.
 """
+import logging
+import os
 from datetime import timedelta
 
 from flask import Flask, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 import config
+
+# One log format for every module (gunicorn's access log is separate).
+# Status messages only: no names, embeddings, transcripts or secrets.
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 # static_folder=None: the React build is served explicitly by routes.py.
 app = Flask(__name__, static_folder=None)
@@ -29,6 +36,11 @@ app.config.update(
 # throttling sees real addresses.
 if config.TRUST_PROXY:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Host-header check (Flask's TRUSTED_HOSTS). localhost stays allowed for the
+# container's own health check.
+if config.ALLOWED_HOSTS:
+    app.config["TRUSTED_HOSTS"] = [*config.ALLOWED_HOSTS, "localhost", "127.0.0.1"]
 
 # Browser hardening on every response (OWASP ASVS V14.4). The React build
 # has no inline scripts and loads nothing from other origins, so scripts are

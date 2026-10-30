@@ -11,5 +11,8 @@ PUBLIC_IP="$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" \
   http://169.254.169.254/latest/meta-data/public-ipv4)"
 
 echo "SITE_ADDRESS=${PUBLIC_IP}" > .env.site
+# Tag the image with the checked-out commit (reported by /readyz).
+APP_VERSION="$(git rev-parse --short HEAD)"
+export APP_VERSION
 docker compose -f docker-compose.aws.yml up -d --build
 echo "Memory Assistant: https://${PUBLIC_IP}"

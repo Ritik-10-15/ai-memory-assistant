@@ -5,21 +5,36 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+  workflow_call:          # reused by release.yml before it builds artifacts
 
+# Read-only token; no secrets are used by any job, so pull requests from
+# forks run the same checks safely.
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Third-party actions are pinned to the commit of a release tag (noted alongside).
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: .github/workflows/tests.yml
+          cache-dependency-path: |
+            .github/workflows/tests.yml
+            requirements-cloud.txt
 
       - name: Install system dependencies for OpenCV
         run: |
@@ -29,12 +44,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install opencv-python-headless numpy Flask pytest ruff
+          pip install opencv-python-headless numpy Flask pytest ruff pip-audit
 
       - name: Static checks (undefined names, unused imports; syntax of every module)
         run: |
           ruff check --select F --exclude frontend .
           python -m compileall -q -x "frontend|venv" .
+
+      - name: Known vulnerabilities in the production Python dependencies
+        run: pip-audit -r requirements-cloud.txt --progress-spinner off
 
       # Real-model recognition tests (tests/test_recognition_real.py) skip here:
       # they need a photo of a consenting person, which the repo doesn't ship.
@@ -43,16 +61,17 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: frontend
 
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
           cache: npm
@@ -60,6 +79,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Runtime dependencies only, high and above. Development-tool findings
+      # (Vite/Vitest dev servers) are tracked in docs/PHASE9_DEPLOYMENT_REPORT.md.
+      - name: Known vulnerabilities in the production frontend dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Type-check
         run: npm run typecheck
@@ -70,16 +94,71 @@ jobs:
       - name: Production build
         run: npx vite build
 
+      - name: Public demo build
+        run: npm run build:demo
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
       - name: End-to-end tests (desktop, tablet, mobile)
         run: npm run test:e2e
 
+      - name: Public demo end-to-end tests (no backend, no camera)
+        run: npx playwright test -c playwright.demo.config.ts
+
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-report
           path: frontend/playwright-report
           retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build the private app image (not published)
+        run: docker build --build-arg APP_VERSION=${GITHUB_SHA::7} -t memory-assistant:ci .
+
+      - name: Build the public demo image (not published)
+        run: docker build -f Dockerfile.demo -t memory-assistant-demo:ci .
+
+      - name: Private app starts, becomes ready and refuses unauthenticated access
+        run: |
+          docker run -d --name app -p 8000:8000 \
+            -e CAREGIVER_PASSWORD=ci-only-password -e PATIENT_PIN=1357 -e SECRET_KEY=ci-only-secret \
+            memory-assistant:ci
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8000/readyz > readyz.json && break
+            sleep 2
+          done
+          cat readyz.json
+          grep -q '"status":"ready"' readyz.json
+          grep -q "\"version\":\"${GITHUB_SHA::7}\"" readyz.json
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/caregiver/people)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/family)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/welcome)" = 200
+          test "$(docker exec app sh -c 'cat /proc/1/status' | awk '/^Uid/{print $2}')" = 10001
+          ! curl -s http://localhost:8000/readyz http://localhost:8000/welcome | grep -q ci-only
+
+      - name: Private app refuses to start with default credentials
+        run: |
+          docker run -d --name unsafe memory-assistant:ci
+          sleep 15
+          test "$(docker inspect -f '{{.State.Running}}' unsafe)" = false
+
+      - name: Public demo serves the site and has no API
+        run: |
+          docker run -d --name demo -p 8080:8080 memory-assistant-demo:ci
+          for i in $(seq 1 30); do curl -sf http://localhost:8080/healthz && break; sleep 1; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/family)" = 404
+
+      - name: Container logs
+        if: always()
+        run: docker logs app 2>&1 | tail -50 || true

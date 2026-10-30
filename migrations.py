@@ -14,10 +14,13 @@ Rollback:  restore that copy, or `python scripts/db_migrate.py down <version>`,
            and columns). Existing people, visits, memories and photos are never
            modified or deleted by either direction.
 """
+import logging
 import sqlite3
 from pathlib import Path
 
 import config
+
+log = logging.getLogger(__name__)
 
 
 def _columns(conn, table):
@@ -143,7 +146,7 @@ def upgrade(path=None, target=LATEST, make_backup=True):
     if version >= target:
         return version
     if make_backup:
-        print(f"💾 Database backup before migrating: {backup(path, version)}")
+        log.info("Database backup before migrating: %s", backup(path, version))
     conn = _connect(path)
     try:
         for v in range(version + 1, target + 1):
@@ -155,7 +158,7 @@ def upgrade(path=None, target=LATEST, make_backup=True):
             except Exception:
                 conn.execute("ROLLBACK")
                 raise
-            print(f"✅ Database migrated to version {v}")
+            log.info("Database migrated to version %d", v)
     finally:
         conn.close()
     return target
@@ -175,7 +178,7 @@ def downgrade(path=None, target=0):
             except Exception:
                 conn.execute("ROLLBACK")
                 raise
-            print(f"↩️  Database rolled back to version {v - 1}")
+            log.info("Database rolled back to version %d", v - 1)
     finally:
         conn.close()
     return min(version, target)

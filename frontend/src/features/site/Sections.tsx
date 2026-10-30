@@ -17,10 +17,10 @@ import {
   UsersRound,
 } from "lucide-react";
 import { ProductPreview } from "./ProductPreview";
-import { Brand } from "./SiteNav";
+import { PUBLIC_DEMO } from "@/lib/publicDemo";
+import { Brand, REPO_URL } from "./SiteNav";
 import { Eyebrow, PillAnchor, Reveal, SectionIntro } from "./ui";
 
-const REPO_URL = "https://github.com/Ritik-10-15/ai-memory-assistant";
 
 // ── Hero ─────────────────────────────────────────────────────────────
 export function Hero() {
@@ -287,10 +287,17 @@ export function SiteFooter() {
         </nav>
         <nav aria-label="Open the app">
           <h2 className="font-body text-sm font-semibold uppercase tracking-wider text-mint-200">Use it</h2>
-          <ul className={`mt-4 ${col}`}>
-            <li><Link className={link} to="/">Patient screen</Link></li>
-            <li><Link className={link} to="/caregiver/login">Caregiver login</Link></li>
-          </ul>
+          {PUBLIC_DEMO ? (
+            <p className="mt-4 text-mint-200">
+              This is the public demo: every scenario is simulated with fictional people. The patient screen and
+              caregiver workspace run privately and are not part of this site.
+            </p>
+          ) : (
+            <ul className={`mt-4 ${col}`}>
+              <li><Link className={link} to="/">Patient screen</Link></li>
+              <li><Link className={link} to="/caregiver/login">Caregiver login</Link></li>
+            </ul>
+          )}
         </nav>
         <div>
           <h2 className="font-body text-sm font-semibold uppercase tracking-wider text-mint-200">Project</h2>

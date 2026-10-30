@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { HeartHandshake, LogIn, Menu, X } from "lucide-react";
+import { CodeXml, HeartHandshake, LogIn, Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { PUBLIC_DEMO } from "@/lib/publicDemo";
 import { PillAnchor } from "./ui";
+
+export const REPO_URL = "https://github.com/Ritik-10-15/ai-memory-assistant";
 
 export const SECTIONS = [
   { id: "top", label: "Home" },
   { id: "how-it-works", label: "How it works" },
   { id: "features", label: "Features" },
+  { id: "albums", label: "Albums" },
   { id: "about", label: "About" },
 ] as const;
 
@@ -108,13 +112,25 @@ export function SiteNav() {
         </ul>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link
-            to="/caregiver/login"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-forest hover:bg-mint-100"
-          >
-            <LogIn className="h-4 w-4" aria-hidden="true" />
-            Caregiver login
-          </Link>
+          {PUBLIC_DEMO ? (
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-forest hover:bg-mint-100"
+            >
+              <CodeXml className="h-4 w-4" aria-hidden="true" />
+              Source code<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          ) : (
+            <Link
+              to="/caregiver/login"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-forest hover:bg-mint-100"
+            >
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+              Caregiver login
+            </Link>
+          )}
           <PillAnchor href="#demo" aria-current={active === "demo" ? "location" : undefined}>
             Try demo
           </PillAnchor>
@@ -156,13 +172,25 @@ export function SiteNav() {
             <PillAnchor href="#demo" size="lg" onClick={() => setOpen(false)}>
               Try demo
             </PillAnchor>
-            <Link
-              to="/caregiver/login"
-              className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-forest/30 font-semibold text-forest hover:border-forest"
-            >
-              <LogIn className="h-4 w-4" aria-hidden="true" />
-              Caregiver login
-            </Link>
+            {PUBLIC_DEMO ? (
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-forest/30 font-semibold text-forest hover:border-forest"
+              >
+                <CodeXml className="h-4 w-4" aria-hidden="true" />
+                Source code<span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : (
+              <Link
+                to="/caregiver/login"
+                className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-forest/30 font-semibold text-forest hover:border-forest"
+              >
+                <LogIn className="h-4 w-4" aria-hidden="true" />
+                Caregiver login
+              </Link>
+            )}
           </div>
         </div>
       )}

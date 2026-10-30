@@ -10,7 +10,8 @@
     "preview": "vite preview --port 4173 --strictPort",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:demo": "vite build -c vite.demo.config.ts && node -e \"require('fs').copyFileSync('dist-demo/index.html','dist-demo/404.html')\""
   },
   "dependencies": {
     "lucide-react": "^1.63.0",

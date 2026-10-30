@@ -6,6 +6,9 @@ wire the modules together and run the server — all real logic lives in
 config.py, database.py, services.py, vision.py, worker.py, camera.py, and
 routes.py. See README.md for the architecture diagram this mirrors.
 """
+import logging
+import os
+
 import config
 from app_instance import app
 from database import init_db
@@ -15,6 +18,8 @@ import routes  # noqa: F401  (import registers every route on `app`)
 import api        # noqa: F401  (JSON API for the React frontend)
 import album_api  # noqa: F401  (family photos + patient reminiscence)
 import albums_api  # noqa: F401  (named photo albums)
+
+log = logging.getLogger(__name__)
 
 
 def startup():
@@ -32,11 +37,9 @@ def startup():
     start_worker()
 
     from services import WHISPER, TTS, OPENAI
-    print("\n🚀 AI Memory Assistant v3.1 — modular architecture")
-    print(f"   Camera mode      : {config.CAMERA_MODE}")
-    print(f"   Whisper STT      : {'✅' if WHISPER else '❌ disabled'}")
-    print(f"   Text-to-speech   : {'✅' if TTS     else '❌ disabled'}")
-    print(f"   OpenAI LLM       : {'✅' if OPENAI  else '❌ disabled'}\n")
+    llm = OPENAI and bool(os.environ.get("OPENAI_API_KEY"))
+    log.info("Memory Assistant started: camera mode %s, voice memos %s, text-to-speech %s, LLM summaries %s",
+             config.CAMERA_MODE, *("on" if f else "off" for f in (WHISPER, TTS, llm)))
 
 
 if __name__ == "__main__":

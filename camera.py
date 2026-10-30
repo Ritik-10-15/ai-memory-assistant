@@ -3,6 +3,7 @@ camera.py — webcam access and the MJPEG frame generator for /video.
 
 This is the "producer" side of the producer-consumer queue with worker.py.
 """
+import logging
 import threading
 import time
 
@@ -13,6 +14,8 @@ import config
 from vision import detect_faces
 from worker import frame_q, det_lock, detection
 from vision import visit_tracker
+
+log = logging.getLogger(__name__)
 
 _camera  = None
 _cam_lock = threading.Lock()
@@ -34,11 +37,11 @@ def get_camera():
                     ok, test = cam.read()
                     if ok and test is not None and test.size > 0:
                         _camera = cam
-                        print(f"✅ Camera opened on index {idx}")
+                        log.info("Camera opened on index %d", idx)
                         break
                     cam.release()
             if _camera is None:
-                print("❌ No camera found")
+                log.warning("No camera found")
     return _camera
 
 

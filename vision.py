@@ -7,6 +7,7 @@ from the worker thread, from routes, or from tests, with no web server
 required. That separation is what let the whole LBPH->SFace engine swap
 happen without touching a single route earlier in this project.
 """
+import logging
 import sqlite3
 import threading
 import time
@@ -18,6 +19,8 @@ import config
 from database import get_db
 from services import speak_greeting
 
+log = logging.getLogger(__name__)
+
 # ── Models (loaded explicitly via load_models(), not at import time) ────
 _detector   = None   # cv2.FaceDetectorYN
 _recognizer = None   # cv2.FaceRecognizerSF
@@ -28,19 +31,15 @@ def load_models():
     global _detector, _recognizer
     missing = [p for p in (config.YUNET_PATH, config.SFACE_PATH) if not p.exists()]
     if missing:
-        print("\n" + "=" * 62)
-        print("❌ MISSING MODEL FILES — face recognition cannot start.")
-        for m in missing:
-            print(f"   not found: {m}")
-        print("\n   Fix: run   python download_models.py")
-        print("=" * 62 + "\n")
+        log.critical("Missing model files, face recognition cannot start: %s. "
+                     "Fix: python scripts/download_models.py", ", ".join(str(m) for m in missing))
         raise SystemExit(1)
     _detector = cv2.FaceDetectorYN.create(
         str(config.YUNET_PATH), "", (config.CAM_W, config.CAM_H),
         score_threshold=0.7, nms_threshold=0.3, top_k=50
     )
     _recognizer = cv2.FaceRecognizerSF.create(str(config.SFACE_PATH), "")
-    print("✅ YuNet detector + SFace recognizer loaded")
+    log.info("YuNet detector and SFace recognizer loaded")
 
 
 def detect_faces(bgr):
@@ -176,10 +175,10 @@ def load_known_faces():
         _gallery, _name_map = new_gallery, new_names
     _save_cache(cache)
     total = sum(len(v) for v in new_gallery.values())
-    print(f"✅ Gallery: {total} embeddings for {len(new_gallery)} people "
-          f"({embedded} newly computed, {cached_hits} from cache)")
+    log.info("Gallery: %d embeddings for %d people (%d newly computed, %d from cache)",
+             total, len(new_gallery), embedded, cached_hits)
     if total == 0:
-        print("⚠️  No usable faces — add people via caregiver panel")
+        log.warning("No usable faces yet; add people in the caregiver workspace")
 
 
 def display_name(pid):
@@ -230,7 +229,7 @@ def recognize(bgr, face_row):
     try:
         feat = embed_face(bgr, face_row)
     except Exception as e:
-        print(f"[RECOG ERROR] {e}")
+        log.warning("Recognition failed for one frame (%s)", type(e).__name__)
         return None, 0.0, None
     query = np.asarray(feat, dtype=np.float32).reshape(-1)
     scores = matrix @ (query / max(float(np.linalg.norm(query)), 1e-12))

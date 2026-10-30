@@ -65,9 +65,13 @@ function useSecretForm(submit: (secret: string) => Promise<unknown>, onSuccess: 
   return { secret, setSecret, error, busy, onSubmit, inputRef };
 }
 
-/** Only allow same-site relative paths as a post-login destination. */
-function safeNext(next: string | null, fallback: string) {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+/**
+ * Only allow same-site relative paths as a post-login destination: one
+ * leading "/", never "//" or a backslash anywhere (browsers and React Router
+ * read "/\evil.example" as another site), and no control characters.
+ */
+export function safeNext(next: string | null, fallback: string) {
+  return next && /^\/(?!\/)[^\\\u0000-\u001f]*$/.test(next) ? next : fallback;
 }
 
 export function CaregiverSignIn() {

@@ -48,3 +48,4 @@ tempCodeRunnerFile.py
 # Server-side secrets / generated hostname (aws deployment)
 .env.aws
 .env.site
+frontend/dist-demo/

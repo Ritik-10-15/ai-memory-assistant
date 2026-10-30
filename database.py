@@ -5,11 +5,14 @@ This is the ONLY module that should ever run raw SQL against the schema
 definition itself (CREATE TABLE). Other modules use get_db() to run their
 own queries against the tables defined here.
 """
+import logging
 import sqlite3
 from pathlib import Path
 
 import config
 import migrations
+
+log = logging.getLogger(__name__)
 
 
 def get_db():
@@ -73,4 +76,4 @@ def init_db():
         );
         """)
     migrations.upgrade(make_backup=had_data)
-    print("✅ Database ready")
+    log.info("Database ready")

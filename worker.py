@@ -180,8 +180,17 @@ def reset_state():
         })
 
 
+_thread = None
+
+
 def start_worker():
     """Starts the recognition worker as a daemon thread. Called explicitly
     from app.py's startup — NOT at import time, so importing this module
     (e.g. from tests) never spins up a background thread unexpectedly."""
-    threading.Thread(target=_recognition_worker, daemon=True).start()
+    global _thread
+    _thread = threading.Thread(target=_recognition_worker, daemon=True, name="recognition-worker")
+    _thread.start()
+
+
+def is_running():
+    return _thread is not None and _thread.is_alive()

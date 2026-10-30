@@ -397,6 +397,18 @@ values printed to the console.
 
 ## Deploying to the cloud (Docker)
 
+**Full instructions: [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**
+(public demo, local Docker Compose, AWS, releases and rollback, backups).
+In short:
+
+- **Public demo** — `cd frontend && npm run build:demo` produces a static site
+  (homepage, simulated demo, fictional illustrated albums; no backend, no
+  camera, no patient code) for any static host, or use `Dockerfile.demo`.
+- **Private app on one computer** — `cp .env.example .env`, fill it in,
+  `docker compose up -d --build` → <http://localhost:8000>.
+- **Private app on AWS** — releases with `sudo bash aws/deploy.sh`, which
+  backs up, checks `/readyz` and rolls back automatically.
+
 Locally, OpenCV reads a webcam plugged into the machine running the app. A
 cloud server has no webcam, so the Docker image runs in **browser-camera
 mode** (`CAMERA_MODE=browser`): the patient/enrollment pages capture the
@@ -446,8 +458,8 @@ aws cloudformation create-stack --region us-east-2 \
 
 The `AppUrl` stack output is the site. First boot builds the image, so allow
 ~10 minutes after `CREATE_COMPLETE`. To ship new code, open a Session Manager
-shell on the instance and run
-`cd /opt/memory-assistant && sudo git pull && sudo bash aws/start.sh`.
+shell on the instance and run `cd /opt/memory-assistant && sudo bash aws/deploy.sh`
+(see the deployment guide for the one-off first release after Phase 9).
 
 Notes for any hosting platform:
 
@@ -471,6 +483,7 @@ cd frontend
 npm run typecheck                   # TypeScript, strict mode
 npm test                            # Vitest + React Testing Library + axe
 npm run build && npm run test:e2e   # Playwright: desktop, tablet, mobile
+npm run build:demo && npx playwright test -c playwright.demo.config.ts   # public demo: no API, no camera
 ```
 
 **With the real face models** (local; needs `python scripts/download_models.py`

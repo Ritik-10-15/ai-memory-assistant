@@ -5,10 +5,13 @@ model never takes down the rest of the app — see the README section on
 graceful degradation of optional dependencies.
 """
 import importlib.util
+import logging
 import os
 import threading
 
 from database import get_db
+
+log = logging.getLogger(__name__)
 
 # Whisper takes seconds and several hundred MB to load, so it loads on a
 # background thread instead of delaying startup. WHISPER says whether voice
@@ -23,7 +26,7 @@ def _load_whisper():
     try:
         import whisper
         _whisper_model = whisper.load_model("base")
-        print("✅ Whisper loaded")
+        log.info("Whisper speech-to-text loaded")
     except Exception:
         WHISPER = False
     finally:
@@ -45,7 +48,7 @@ try:
     import pyttsx3
     _tts_engine = pyttsx3.init()
     TTS = True
-    print("✅ TTS loaded")
+    log.info("Text-to-speech loaded")
 except Exception:
     TTS = False
     _tts_engine = None
@@ -74,14 +77,14 @@ def auto_log(pid, audio_path):
                     max_tokens=80)
                 summary = r.choices[0].message.content.strip()
             except Exception as e:
-                print(f"LLM error: {e}")
+                log.warning("LLM summary failed (%s); keeping the transcript", type(e).__name__)
         with get_db() as c:
             c.execute(
                 "INSERT INTO memories (person_id,summary,raw_transcript,source) VALUES(?,?,?,?)",
                 (pid, summary, transcript, "whisper"))
-        print(f"✅ Memory auto-logged for {pid}")
+        log.info("Voice memo saved as a memory")
     except Exception as e:
-        print(f"Whisper error: {e}")
+        log.warning("Voice memo transcription failed (%s)", type(e).__name__)
 
 
 def speak_greeting(pid):

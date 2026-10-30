@@ -1,9 +1,14 @@
-# Single-instance AWS deployment (see aws/free-tier-ec2.yaml and DEPLOY_AWS.md).
+# Single-instance AWS deployment (see aws/free-tier-ec2.yaml and docs/DEPLOYMENT_GUIDE.md).
 # Caddy terminates HTTPS — browsers only allow camera access on HTTPS pages —
 # with an automatic Let's Encrypt certificate for SITE_ADDRESS (the public IP).
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+    # One image per commit, so aws/deploy.sh can return to the previous one.
+    image: memory-assistant:${APP_VERSION:-dev}
     env_file: .env.aws
     environment:
       SECURE_COOKIES: "1"   # served only over HTTPS (Caddy)
@@ -16,6 +21,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
 
   caddy:
     image: caddy:2.11.6-alpine
@@ -27,6 +35,9 @@ services:
       - ./aws/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     depends_on:
       app:
         condition: service_healthy
