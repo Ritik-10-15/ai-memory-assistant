@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import type { Page, Route } from "@playwright/test";
 import type { Album, AppStatus, CurrentPerson, FamilyMember, Person } from "../src/api/types";
-import { idle, john, maybeSarah, sarah, unknownFace } from "../src/test/fixtures";
+import { idle, john, maybeSarah, photoExtras, sarah, unknownFace } from "../src/test/fixtures";
 
 export { idle, john, maybeSarah, sarah, unknownFace };
 
@@ -194,8 +194,8 @@ export const album: Album = {
     { id: 6, person_id: john.person_id!, person_name: "John Smith", relationship: "Neighbour", summary: "You watched the football together and John made tea.", created_at: "2026-10-25 10:00:00", photo_id: null },
   ],
   photos: [
-    { id: "b".repeat(32), caption: "Whitby beach", story: "A sunny day by the sea. We built a sandcastle and shared fish and chips on the harbour wall.", taken_on: "Summer 1998", memory_id: null, created_at: "2026-10-01 10:00:00", people: [{ id: sarah.person_id!, name: "Sarah Johnson" }] },
-    { id: "g".repeat(32), caption: "The rose garden", story: "", taken_on: "June 2026", memory_id: 5, created_at: "2026-10-20 15:05:00", people: [{ id: sarah.person_id!, name: "Sarah Johnson" }] },
-    { id: "l".repeat(32), caption: "Sunday lunch", story: "Roast dinner at the big table, with everyone home for the weekend.", taken_on: "Christmas 2019", memory_id: null, created_at: "2026-09-12 12:00:00", people: [] },
+    { id: "b".repeat(32), caption: "Whitby beach", story: "A sunny day by the sea. We built a sandcastle and shared fish and chips on the harbour wall.", taken_on: "Summer 1998", memory_id: null, created_at: "2026-10-01 10:00:00", people: [{ id: sarah.person_id!, name: "Sarah Johnson", relationship: "Daughter" }], ...photoExtras },
+    { id: "g".repeat(32), caption: "The rose garden", story: "", taken_on: "June 2026", memory_id: 5, created_at: "2026-10-20 15:05:00", people: [{ id: sarah.person_id!, name: "Sarah Johnson", relationship: "Daughter" }], ...photoExtras },
+    { id: "l".repeat(32), caption: "Sunday lunch", story: "Roast dinner at the big table, with everyone home for the weekend.", taken_on: "Christmas 2019", memory_id: null, created_at: "2026-09-12 12:00:00", people: [], ...photoExtras },
   ],
 };

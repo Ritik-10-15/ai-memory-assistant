@@ -1,5 +1,10 @@
 import type {
   Album,
+  AlbumDetail,
+  AlbumInput,
+  AlbumPage,
+  AlbumSummary,
+  CaregiverAlbum,
   Analytics,
   AppStatus,
   CurrentPerson,
@@ -87,6 +92,60 @@ async function request<T>(method: string, url: string, body?: Body, signal?: Abo
   return data as T;
 }
 
+/** Upload progress: bytes sent so far and in total. */
+export type UploadProgress = (loaded: number, total: number) => void;
+
+/**
+ * Like request(), for multipart uploads that report progress (fetch can't).
+ * Same error behaviour: ApiError with the server's message, and the
+ * unauthorized event on 401.
+ */
+function upload<T>(url: string, form: FormData, onProgress?: UploadProgress, signal?: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.withCredentials = true;
+    if (onProgress) xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded, e.total);
+    xhr.onerror = () => reject(new ApiError("Can't reach the Memory Assistant server.", 0));
+    xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
+    xhr.onload = () => {
+      let data: unknown = null;
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        data = null;
+      }
+      // A 400 that lists per-file results means every file was rejected.
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(data as T);
+      if (xhr.status === 400 && (data as { rejected?: unknown } | null)?.rejected) return resolve(data as T);
+      if (xhr.status === 401) window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { url } }));
+      const message =
+        (data as { error?: string } | null)?.error ??
+        (xhr.status >= 500 ? "The server had a problem. Please try again." : `Upload failed (${xhr.status}).`);
+      reject(new ApiError(message, xhr.status));
+    };
+    signal?.addEventListener("abort", () => xhr.abort());
+    xhr.send(form);
+  });
+}
+
+function photoForm(files: File[], details: PhotoDetailsInput): FormData {
+  const form = new FormData();
+  files.forEach((f) => form.append("photos", f, f.name));
+  form.append("caption", details.caption);
+  form.append("story", details.story);
+  form.append("taken_on", details.taken_on);
+  form.append("location", details.location);
+  form.append("category", details.category);
+  form.append("prompt", details.prompt);
+  if (details.memory_id !== null) form.append("memory_id", String(details.memory_id));
+  details.person_ids.forEach((id) => form.append("person_ids", id));
+  return form;
+}
+
+const albumUrl = (id: string) => `/api/caregiver/albums/${encodeURIComponent(id)}`;
+
 function personForm(input: PersonInput, photos: File[]): FormData {
   const form = new FormData();
   (Object.keys(input) as Array<keyof PersonInput>).forEach((k) => form.append(k, input[k]));
@@ -144,7 +203,11 @@ export const api = {
   familyMember: (id: string, signal?: AbortSignal) =>
     request<FamilyMemberDetail>("GET", `/api/family/${encodeURIComponent(id)}`, undefined, signal),
   album: () => request<Album>("GET", "/api/album"),
-  photoUrl: (photoId: string) => `/api/photos/${encodeURIComponent(photoId)}/image`,
+  photoUrl: (photoId: string, size?: "thumb") =>
+    `/api/photos/${encodeURIComponent(photoId)}/image${size ? `?size=${size}` : ""}`,
+  albums: () => request<AlbumSummary[]>("GET", "/api/albums"),
+  albumPage: (id: string, offset = 0, limit = 60) =>
+    request<AlbumPage>("GET", `/api/albums/${encodeURIComponent(id)}?offset=${offset}&limit=${limit}`),
 
   // Family album — caregiver management
   photos: (personId?: string) =>
@@ -152,19 +215,28 @@ export const api = {
       "GET",
       personId ? `/api/caregiver/photos?person_id=${encodeURIComponent(personId)}` : "/api/caregiver/photos",
     ),
-  uploadPhotos: (files: File[], details: PhotoDetailsInput) => {
-    const form = new FormData();
-    files.forEach((f) => form.append("photos", f, f.name));
-    form.append("caption", details.caption);
-    form.append("story", details.story);
-    form.append("taken_on", details.taken_on);
-    if (details.memory_id !== null) form.append("memory_id", String(details.memory_id));
-    details.person_ids.forEach((id) => form.append("person_ids", id));
-    return request<UploadPhotosResult>("POST", "/api/caregiver/photos", form);
-  },
+  uploadPhotos: (files: File[], details: PhotoDetailsInput, onProgress?: UploadProgress, signal?: AbortSignal) =>
+    upload<UploadPhotosResult>("/api/caregiver/photos", photoForm(files, details), onProgress, signal),
   updatePhoto: (id: string, details: PhotoDetailsInput) =>
     request<FamilyPhoto>("PUT", `/api/caregiver/photos/${encodeURIComponent(id)}`, { ...details }),
   deletePhoto: (id: string) => request<{ ok: true }>("DELETE", `/api/caregiver/photos/${encodeURIComponent(id)}`),
+  // Photo albums — caregiver management
+  careAlbums: () => request<CaregiverAlbum[]>("GET", "/api/caregiver/albums"),
+  careAlbum: (id: string) => request<AlbumDetail>("GET", albumUrl(id)),
+  createAlbum: (input: AlbumInput) => request<AlbumDetail>("POST", "/api/caregiver/albums", { ...input }),
+  updateAlbum: (id: string, patch: Partial<AlbumInput> & { cover_photo_id?: string | null }) =>
+    request<AlbumDetail>("PATCH", albumUrl(id), { ...patch }),
+  deleteAlbum: (id: string, deletePhotos: boolean) =>
+    request<{ ok: true; deleted_photos: number }>("DELETE", `${albumUrl(id)}${deletePhotos ? "?delete_photos=1" : ""}`),
+  /** The editor sends one file per call, for per-file progress and results. */
+  uploadToAlbum: (id: string, files: File[], details: PhotoDetailsInput, onProgress?: UploadProgress, signal?: AbortSignal) =>
+    upload<AlbumDetail & UploadPhotosResult>(`${albumUrl(id)}/photos`, photoForm(files, details), onProgress, signal),
+  addToAlbum: (id: string, photoIds: string[]) =>
+    request<AlbumDetail>("POST", `${albumUrl(id)}/photos`, { photo_ids: photoIds }),
+  orderAlbum: (id: string, photoIds: string[]) =>
+    request<AlbumDetail>("PUT", `${albumUrl(id)}/photos/order`, { photo_ids: photoIds }),
+  removeFromAlbum: (id: string, photoId: string) =>
+    request<AlbumDetail>("DELETE", `${albumUrl(id)}/photos/${encodeURIComponent(photoId)}`),
   setProfilePhoto: (personId: string, photoId: string | null) =>
     request<{ ok: true }>("PUT", `/api/caregiver/people/${encodeURIComponent(personId)}/profile-photo`, {
       photo_id: photoId,

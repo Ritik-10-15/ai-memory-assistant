@@ -128,12 +128,14 @@ export function PhotoPicker({
   label = "Face photos",
   hint = "A few clear photos of this person alone, facing the camera. Each photo is checked for exactly one face.",
   id = "photo-input",
+  accept = "image/jpeg,image/png",
 }: {
   files: File[];
   onChange: (files: File[]) => void;
   label?: string;
   hint?: string;
   id?: string;
+  accept?: string;
 }) {
   const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
@@ -151,7 +153,7 @@ export function PhotoPicker({
       <input
         id={id}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={accept}
         multiple
         aria-describedby={`${id}-hint`}
         onChange={(e) => {

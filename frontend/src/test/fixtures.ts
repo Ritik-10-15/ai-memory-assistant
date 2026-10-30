@@ -77,3 +77,6 @@ export const serverStatus: AppStatus = {
   enrolled_people: 2,
   gallery_embeddings: 14,
 };
+
+/** Phase 5 photo fields, empty — spread into hand-written FamilyPhoto fixtures. */
+export const photoExtras = { location: "", category: "" as const, prompt: "", width: 1600, height: 1200, memory: null };

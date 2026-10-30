@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { api, ApiError } from "@/api/client";
 import type { Album, AlbumMemory, FamilyMember, FamilyPhoto } from "@/api/types";
 import { axeViolations } from "@/test/axe";
-import { idle, sarah, serverStatus } from "@/test/fixtures";
+import { idle, photoExtras, sarah, serverStatus } from "@/test/fixtures";
 import { installSpeechMock } from "@/test/speech";
 import { PatientScreen } from "../PatientScreen";
 import { buildAlbum } from "./pieces";
@@ -37,7 +37,8 @@ const beach: FamilyPhoto = {
   taken_on: "Summer 1998",
   memory_id: null,
   created_at: "2026-10-01 10:00:00",
-  people: [{ id: SARAH, name: "Sarah Johnson" }],
+  people: [{ id: SARAH, name: "Sarah Johnson", relationship: "Daughter" }],
+  ...photoExtras,
 };
 const lunchPhoto: FamilyPhoto = { ...beach, id: "b".repeat(32), caption: "Sunday lunch", story: "", taken_on: "", memory_id: 5 };
 const roses: AlbumMemory = {
@@ -144,9 +145,9 @@ describe("Memories album", () => {
   it("shows memory cards with gentle prompts, never quiz questions", async () => {
     renderAt("/memories");
     expect(await screen.findByRole("heading", { name: "Whitby beach" })).toBeInTheDocument();
-    expect(screen.getByText("Would you like to hear about this day?")).toBeInTheDocument();
-    expect(screen.getByText("Would you like to listen to this memory?")).toBeInTheDocument();
-    expect(screen.getByText("Shall we look at this photo together?")).toBeInTheDocument();
+    // Two conversation memories (one with its photo) and a photo with a story.
+    expect(screen.getAllByText("Would you like to listen to this memory?")).toHaveLength(2);
+    expect(screen.getByText("Would you like to hear the story behind this photo?")).toBeInTheDocument();
     expect(screen.getByText(/no right or wrong answers/)).toBeInTheDocument();
     expect(screen.queryByText(/do you remember|who is this|can you name/i)).not.toBeInTheDocument();
   });
