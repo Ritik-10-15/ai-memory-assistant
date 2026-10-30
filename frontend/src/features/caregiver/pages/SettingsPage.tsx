@@ -101,7 +101,7 @@ export function SettingsPage() {
                 </li>
                 <li className="flex gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" aria-hidden="true" />
-                  Your sign-in ends when you sign out or close the browser. After five wrong passwords, sign-in pauses for five minutes.
+                  Your sign-in ends when you sign out or close the browser, and after 12 hours at most. After five wrong passwords, sign-in pauses for five minutes.
                 </li>
               </ul>
               <Button variant="secondary" icon={<LogOut className="h-4 w-4" aria-hidden="true" />} onClick={signOut}>

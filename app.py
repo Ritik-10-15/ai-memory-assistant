@@ -41,6 +41,6 @@ def startup():
 
 if __name__ == "__main__":
     startup()
-    print(f"   Patient UI  → http://127.0.0.1:5000/")
-    print(f"   Caregiver   → http://127.0.0.1:5000/caregiver\n")
+    print("   Patient UI  → http://127.0.0.1:5000/")
+    print("   Caregiver   → http://127.0.0.1:5000/caregiver\n")
     app.run(debug=False, threaded=True, host="0.0.0.0", port=5000)

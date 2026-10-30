@@ -20,6 +20,7 @@ from flask import (Response, jsonify, request, redirect, url_for, session,
 import config
 from app_instance import app
 from auth import (caregiver_required, patient_required, secret_matches,
+                  start_caregiver_session, end_caregiver_session,
                   retry_after, record_failure, clear_failures)
 from database import get_db
 from services import auto_log, WHISPER
@@ -214,7 +215,7 @@ def caregiver_login():
             return redirect(url_for("caregiver_login", error="locked"))
         if secret_matches(request.form.get("password"), config.CAREGIVER_PASS):
             clear_failures("caregiver")
-            session["caregiver"] = True
+            start_caregiver_session()
             return redirect(url_for("caregiver_dashboard"))
         record_failure("caregiver")
         return redirect(url_for("caregiver_login", error="invalid"))
@@ -223,7 +224,7 @@ def caregiver_login():
 
 @app.route("/caregiver/logout")
 def caregiver_logout():
-    session.pop("caregiver", None)
+    end_caregiver_session()
     return redirect(url_for("index"))
 
 

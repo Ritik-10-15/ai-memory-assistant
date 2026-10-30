@@ -74,7 +74,22 @@ def _down_1(conn):
             conn.execute(f"ALTER TABLE photos DROP COLUMN {name}")   # SQLite ≥ 3.35
 
 
-MIGRATIONS = {1: (_up_1, _down_1)}
+# ── 2: indexes for per-person lookups ─────────────────────────────────
+# Every people list and every confirmed recognition frame looks up a
+# person's visits / memories. Without these, each lookup scans the whole
+# visits table: measured 2.3 s for the caregiver people list at 100k visits
+# (19 ms with the index).
+def _up_2(conn):
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_visits_person ON visits(person_id, started_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_person ON memories(person_id, created_at)")
+
+
+def _down_2(conn):
+    conn.execute("DROP INDEX IF EXISTS idx_visits_person")
+    conn.execute("DROP INDEX IF EXISTS idx_memories_person")
+
+
+MIGRATIONS = {1: (_up_1, _down_1), 2: (_up_2, _down_2)}
 LATEST = max(MIGRATIONS)
 
 

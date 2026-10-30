@@ -20,7 +20,8 @@ import config
 import services
 from app_instance import app
 from auth import (caregiver_required, patient_required, secret_matches,
-                  retry_after, record_failure, clear_failures)
+                  retry_after, record_failure, clear_failures,
+                  end_caregiver_session, is_caregiver, start_caregiver_session)
 from album_api import profile_photo_file
 from database import get_db
 from vision import (assess_enrollment_photo, gallery_counts, load_known_faces,
@@ -69,8 +70,8 @@ def _text(form, key, limit=MAX_TEXT):
 def api_session():
     """What the current browser is signed in as. Reveals no data."""
     return jsonify({
-        "caregiver": bool(session.get("caregiver")),
-        "patient": bool(session.get("patient") or session.get("caregiver")
+        "caregiver": is_caregiver(),
+        "patient": bool(session.get("patient") or is_caregiver()
                         or not config.PATIENT_PIN),
         "patient_pin_required": bool(config.PATIENT_PIN),
     })
@@ -95,12 +96,12 @@ def _login(scope, given, expected, on_success):
 def api_caregiver_login():
     data = request.get_json(silent=True) or {}
     return _login("caregiver", data.get("password"), config.CAREGIVER_PASS,
-                  lambda: session.update(caregiver=True))
+                  start_caregiver_session)
 
 
 @app.route("/api/caregiver/logout", methods=["POST"])
 def api_caregiver_logout():
-    session.pop("caregiver", None)
+    end_caregiver_session()
     return jsonify({"ok": True})
 
 

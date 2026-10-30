@@ -21,6 +21,9 @@ CAREGIVER_PASS  = os.environ.get("CAREGIVER_PASSWORD", "caregiver123")
 # Unset (local default) leaves the patient screen open, as before.
 PATIENT_PIN     = os.environ.get("PATIENT_PIN")
 SECRET_KEY      = os.environ.get("SECRET_KEY", "alzheimer-secret-v3-2024")
+# A caregiver sign-in ends when the browser closes, and in any case after
+# this many hours (checked on the server).
+CAREGIVER_SESSION_HOURS = 12
 
 YUNET_PATH = MODELS_DIR / "face_detection_yunet_2023mar.onnx"
 SFACE_PATH = MODELS_DIR / "face_recognition_sface_2021dec.onnx"
@@ -49,5 +52,6 @@ NO_FACE_TIMEOUT       = 25
 FRAME_QUEUE_SIZE      = 2
 STICKY_FRAMES         = 12  # bridge frames with NO detection (blink/turn)
 UNKNOWN_GRACE_FRAMES  = 4   # non-matching frames tolerated before dropping a name
+FRAME_STALE_S         = 3.0 # no frames for this long (camera off, tab hidden): forget the identity
 
 CAM_W, CAM_H = 640, 480
