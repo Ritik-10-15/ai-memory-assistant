@@ -125,7 +125,7 @@ function upload<T>(url: string, form: FormData, onProgress?: UploadProgress, sig
         (xhr.status >= 500 ? "The server had a problem. Please try again." : `Upload failed (${xhr.status}).`);
       reject(new ApiError(message, xhr.status));
     };
-    signal?.addEventListener("abort", () => xhr.abort());
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
     xhr.send(form);
   });
 }

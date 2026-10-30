@@ -6,7 +6,7 @@ without circularly importing app.py itself.
 """
 from datetime import timedelta
 
-from flask import Flask
+from flask import Flask, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 import config
 
@@ -29,3 +29,38 @@ app.config.update(
 # throttling sees real addresses.
 if config.TRUST_PROXY:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Browser hardening on every response (OWASP ASVS V14.4). The React build
+# has no inline scripts and loads nothing from other origins, so scripts are
+# limited to this site. Inline *styles* stay allowed: charts and layout set
+# style attributes. Blob URLs are previews of photos being uploaded.
+CSP = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "media-src 'self' blob:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+
+
+@app.after_request
+def security_headers(resp):
+    h = resp.headers
+    h.setdefault("Content-Security-Policy", CSP)
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("X-Frame-Options", "DENY")              # clickjacking (older browsers)
+    h.setdefault("Referrer-Policy", "same-origin")
+    h.setdefault("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()")
+    if config.SECURE_COOKIES:                            # only when served over HTTPS
+        h.setdefault("Strict-Transport-Security", "max-age=31536000")
+    # Private data must not be kept in shared or back/forward caches. Photos
+    # set their own "private" caching.
+    if request.path.startswith("/api/") and resp.mimetype == "application/json":
+        h["Cache-Control"] = "no-store"
+    return resp
