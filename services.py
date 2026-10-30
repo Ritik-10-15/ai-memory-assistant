@@ -5,7 +5,6 @@ model never takes down the rest of the app — see the README section on
 graceful degradation of optional dependencies.
 """
 import os
-import config
 from database import get_db
 
 try:

@@ -1,6 +1,5 @@
 """Browser hardening headers (Phase 6 audit, D5)."""
 import config
-import app_instance
 
 
 def test_pages_and_api_send_hardening_headers(client):

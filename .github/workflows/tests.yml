@@ -18,6 +18,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/workflows/tests.yml
 
       - name: Install system dependencies for OpenCV
         run: |
@@ -27,8 +29,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install opencv-python-headless numpy Flask pytest
+          pip install opencv-python-headless numpy Flask pytest ruff
 
+      - name: Static checks (undefined names, unused imports; syntax of every module)
+        run: |
+          ruff check --select F --exclude frontend .
+          python -m compileall -q -x "frontend|venv" .
+
+      # Real-model recognition tests (tests/test_recognition_real.py) skip here:
+      # they need a photo of a consenting person, which the repo doesn't ship.
       - name: Run tests
         run: pytest tests/ -v
 

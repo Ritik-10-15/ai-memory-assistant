@@ -12,7 +12,7 @@ import os
 import sys
 
 import config
-from app import app, startup
+from app import app, startup  # noqa: F401  (gunicorn loads wsgi:app)
 
 # Refuse to serve real patient data behind the publicly-known defaults.
 # Exit code 3 is gunicorn's "worker failed to boot": it stops the server

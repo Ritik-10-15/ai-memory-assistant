@@ -109,8 +109,7 @@ def main(face_path):
         vision._name_map.clear()
         vision._name_map.update({"me": "Me"})
     import camera
-    import queue as q
-    ages, stop = [], [False]
+    ages = []
     real_get = worker.frame_q.get
 
     def timed_get(*a, **k):
