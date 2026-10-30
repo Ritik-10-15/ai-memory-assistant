@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { DemoSection } from "./DemoSection";
+import { DemoExperience } from "./demo/DemoExperience";
 import { About, Features, Hero, HowItWorks, SiteFooter } from "./Sections";
 import { SiteNav } from "./SiteNav";
 import "./site.css";
@@ -27,7 +27,7 @@ export default function SitePage() {
         <Hero />
         <HowItWorks />
         <Features />
-        <DemoSection />
+        <DemoExperience />
         <About />
       </main>
       <SiteFooter />

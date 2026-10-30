@@ -50,12 +50,21 @@ right or wrong answers.
 ### Public homepage
 
 `/welcome` is a public product page: how it works, what is built today versus
-on the roadmap, and an **interactive simulated demo** (familiar visitor,
-possible match, someone new, nobody there) showing how the interface avoids
-guessing a name. The demo uses fictional people and original illustrations,
-runs entirely in the browser, never opens the camera and never calls the
-backend. It has its own design tokens (mint, forest, plum, cream; DM Serif
-Display and Inter) and is code-split, so the patient app doesn't load it.
+on the roadmap, and an **interactive simulated demo** that walks through
+Recognise → Identify → Retrieve memory → Reconnect in five scenarios: a known
+visitor, an unknown visitor, no face (the identity is held for a moment, then
+cleared), a different visitor (one identity fully replaces the other) and an
+uncertain match (memories withheld until confirmed). A tablet-style preview,
+step progress, Previous/Next/Restart and a similarity meter on the real
+thresholds make the safety behaviour visible.
+
+The demo is a small state machine (`frontend/src/features/site/demo/model.ts`)
+and the screen is derived from the current step only, mirroring how the real
+patient app derives its view. It uses fictional people and original
+illustrations, runs entirely in the browser, never opens the camera, never
+calls the backend (enforced by tests), and works even when Flask's recognition
+services are unavailable. The page has its own design tokens (mint, forest,
+plum, cream; DM Serif Display and Inter) and is code-split.
 The patient PIN screen links to it ("What is Memory Assistant?").
 
 ---
