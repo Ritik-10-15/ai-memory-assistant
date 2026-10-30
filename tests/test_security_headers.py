@@ -22,3 +22,11 @@ def test_hsts_only_over_https(client, monkeypatch):
     assert "Strict-Transport-Security" not in client.get("/welcome").headers
     monkeypatch.setattr(config, "SECURE_COOKIES", True)
     assert client.get("/welcome").headers["Strict-Transport-Security"].startswith("max-age=")
+
+
+def test_requests_for_other_host_names_are_refused_when_hosts_are_listed(client, monkeypatch):
+    """Phase 9: ALLOWED_HOSTS → Flask TRUSTED_HOSTS."""
+    import app_instance
+    monkeypatch.setitem(app_instance.app.config, "TRUSTED_HOSTS", ["memory.example.org", "localhost"])
+    assert client.get("/healthz", base_url="http://memory.example.org").status_code == 200
+    assert client.get("/healthz", base_url="http://evil.example.net").status_code == 400

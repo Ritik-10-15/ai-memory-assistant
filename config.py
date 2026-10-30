@@ -41,6 +41,9 @@ FRONTEND_DIST = Path(__file__).resolve().parent / "frontend" / "dist"
 # Production hardening, switched on by the Docker/AWS deployment.
 SECURE_COOKIES = os.environ.get("SECURE_COOKIES") == "1"   # HTTPS-only cookie
 TRUST_PROXY    = os.environ.get("TRUST_PROXY") == "1"      # behind Caddy
+# Optional: host names this server answers for (comma-separated); requests
+# naming any other Host are refused with 400. Empty = no check.
+ALLOWED_HOSTS  = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
 
 # Recognition thresholds — SFace cosine similarity, official same-person
 # threshold is 0.363. Two bands so the UI can say "recognized" vs "might be".

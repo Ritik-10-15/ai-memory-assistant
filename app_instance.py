@@ -37,6 +37,11 @@ app.config.update(
 if config.TRUST_PROXY:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
+# Host-header check (Flask's TRUSTED_HOSTS). localhost stays allowed for the
+# container's own health check.
+if config.ALLOWED_HOSTS:
+    app.config["TRUSTED_HOSTS"] = [*config.ALLOWED_HOSTS, "localhost", "127.0.0.1"]
+
 # Browser hardening on every response (OWASP ASVS V14.4). The React build
 # has no inline scripts and loads nothing from other origins, so scripts are
 # limited to this site. Inline *styles* stay allowed: charts and layout set
