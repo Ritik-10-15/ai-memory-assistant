@@ -12,6 +12,7 @@ venv/
 # Personal / biometric data — lives on the /data volume instead
 known_faces/
 uploads/
+photos/
 memory_v2.db*
 *.db-wal
 *.db-shm
