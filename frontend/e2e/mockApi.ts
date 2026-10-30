@@ -61,6 +61,9 @@ export const people: Person[] = [
   },
 ];
 
+const visit = { id: 1, person_id: people[0].id, person_name: "Sarah Johnson", relationship: "Daughter", started_at: "2026-10-20 14:30:00", ended_at: "2026-10-20 14:42:00", duration_s: 720, confidence: 0.71 };
+const memory = { id: 7, person_id: people[0].id, person_name: "Sarah Johnson", summary: "You talked about the roses.", raw_transcript: null, source: "manual", created_at: "2026-10-20 15:00:00" };
+
 /**
  * Mock the backend. `sequence` is served by /api/current-person one poll at
  * a time (the last entry repeats).
@@ -98,13 +101,9 @@ export async function mockBackend(
       case "GET /api/caregiver/people":
         return json(route, people);
       case "GET /api/caregiver/visits":
-        return json(route, [
-          { id: 1, person_id: people[0].id, person_name: "Sarah Johnson", relationship: "Daughter", started_at: "2026-10-20 14:30:00", ended_at: "2026-10-20 14:42:00", duration_s: 720, confidence: 0.71 },
-        ]);
+        return json(route, [visit]);
       case "GET /api/caregiver/memories":
-        return json(route, [
-          { id: 7, person_id: people[0].id, person_name: "Sarah Johnson", summary: "You talked about the roses.", raw_transcript: null, source: "manual", created_at: "2026-10-20 15:00:00" },
-        ]);
+        return json(route, [memory]);
       case "GET /api/caregiver/analytics":
         return json(route, {
           per_person: [{ person_id: people[0].id, name: "Sarah Johnson", visits: 5, avg_duration_s: 600, last_seen: "2026-10-20 14:30:00" }],
@@ -127,6 +126,20 @@ export async function mockBackend(
             photos: album.photos.filter((p) => p.people.some((x) => x.id === person.id)),
             visits: { count: 5, recent: ["2026-10-20 14:30:00"] },
           });
+        }
+        if (url.pathname.startsWith("/api/caregiver/people/")) {
+          const person = people.find((p) => url.pathname.endsWith(p.id));
+          if (!person) return json(route, { error: "Person not found." }, 404);
+          if (method === "DELETE") return json(route, { ok: true });
+          return json(route, {
+            person,
+            memories: person.memory_count ? [memory] : [],
+            visits: person.visit_count ? [visit] : [],
+          });
+        }
+        if (url.pathname.startsWith("/api/caregiver/memories/")) {
+          if (method === "PUT") return json(route, { ...memory, summary: route.request().postDataJSON()?.summary ?? memory.summary });
+          if (method === "DELETE") return json(route, { ok: true });
         }
         if (url.pathname.startsWith("/api/photos/")) {
           const img = IMAGES[url.pathname.split("/")[3]];

@@ -50,10 +50,24 @@ right or wrong answers.
     for, and the hook returns only data stored for the current visitor.
   - Browsing a loved one's page says plainly that it doesn't mean they are
     here; only the camera decides who is visiting.
-- **Caregiver workspace** (`/caregiver`): overview with system status, people
-  with enrollment status, guided face enrollment, **family photos** (caption,
-  story, date, who is in it, linked memory), profile pictures, memories, a
-  visit timeline with charts, and settings.
+- **Caregiver workspace** (`/caregiver`), in the same calm palette as the
+  patient companion:
+  - **Overview** with real counts, recent activity, system status and who
+    still needs face enrollment.
+  - **Loved ones** directory with search, enrollment filters and sorting; each
+    person has a **profile** (details, enrollment, memories, visits, profile
+    picture) with edit and delete (always confirmed).
+  - **Face enrollment** as four steps: *Who → Photos → Check → Done*. "Done"
+    appears only after the server confirms new usable face samples; no face,
+    several faces, unreadable images, failed uploads and server errors each
+    get a plain explanation.
+  - **Memories**: add, edit the wording, delete (confirmed) and listen to each
+    memory read aloud, the way the patient will hear it.
+  - **Visit history** with charts (and table alternatives), search, visitor
+    and date-range filters (including custom dates) and sorting.
+  - **Family photos** (caption, story, date, who is in it, linked memory).
+  - **Settings** that exist: larger text and reduced motion for this device,
+    read-only camera/recognition/PIN status, sign out, CSV export.
 
 ---
 
@@ -208,7 +222,9 @@ Three ways:
    several faces are rejected with an explanation, and accepted photos are
    re-encoded (which strips location metadata).
 2. **Live capture** under *Face enrollment* (`/caregiver/enroll`). Frames with
-   more than one face are refused, so the wrong person can't be enrolled.
+   more than one face are refused, so the wrong person can't be enrolled. The
+   gallery is rebuilt after 10 accepted frames; the wizard then polls the
+   person's `embedding_count` and only reports success once it has gone up.
 3. **`scripts/capture_faces.py`** — a standalone script that guides you through ~45 shots
    at varied distance/angle/expression (run with the main app stopped so the
    camera is free).
@@ -405,7 +421,14 @@ contrast) in a real browser. GitHub Actions runs all of it on every push.
   embedding→matching, the thresholding and open-set rejection, the recognition
   state machine and its failure-mode handling, and the surrounding memory/recall
   product.
-- This is a prototype and assistive aid, not a medical device.
+- This is a prototype and assistive aid, not a medical device. It has not been
+  assessed for HIPAA or any other healthcare compliance regime.
+- There is a single shared caregiver password (from `CAREGIVER_PASSWORD`);
+  there are no individual caregiver accounts, roles or in-app password changes.
+- Memories can be edited (summary text only, `PUT /api/caregiver/memories/<id>`;
+  the original voice-memo transcript is kept unchanged). Original voice-memo
+  **audio** isn't stored or linked to a memory, so "play" reads the memory
+  aloud with the device's speech voice instead.
 
 ---
 ## Roadmap
@@ -414,6 +437,8 @@ contrast) in a real browser. GitHub Actions runs all of it on every push.
 - Vector database for the gallery — FAISS for fast nearest-neighbor matching as enrolled people grow.
 - PostgreSQL — replace SQLite for concurrent multi-user access.
 - Multi-face support — detect and identify several people per frame.
+- Keep voice-memo recordings and let caregivers play the original audio.
+- Individual caregiver accounts with roles and an audit log of changes.
 
 ## License
 

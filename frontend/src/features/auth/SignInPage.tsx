@@ -81,7 +81,7 @@ export function CaregiverSignIn() {
   }, [navigate, next]);
 
   return (
-    <Shell title="Caregiver sign-in" description="Manage people, face enrollment and memories.">
+    <Shell companion title="Caregiver sign-in" description="Manage people, face enrollment and memories.">
       <form onSubmit={form.onSubmit} className="space-y-4" noValidate>
         {form.error && <Alert tone="error">{form.error}</Alert>}
         <TextField

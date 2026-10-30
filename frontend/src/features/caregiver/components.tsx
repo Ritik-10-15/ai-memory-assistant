@@ -17,10 +17,10 @@ export function PageHeader({
     document.title = `${title} · Memory Assistant`;
   }, [title]);
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold text-ink sm:text-[1.75rem]">{title}</h1>
-        {description && <p className="mt-1 max-w-2xl text-[15px] text-ink-muted">{description}</p>}
+        <h1 className="font-serif text-3xl leading-tight text-ink sm:text-[2.6rem]">{title}</h1>
+        {description && <p className="mt-2 max-w-2xl text-base leading-relaxed text-ink-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -39,12 +39,14 @@ export function StatTile({
   icon?: ReactNode;
 }) {
   return (
-    <Card className="p-4 sm:p-5">
+    <Card className="rounded-3xl p-4 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-ink-muted">{label}</p>
-        {icon && <span className="hidden text-primary-700 sm:block">{icon}</span>}
+        {icon && (
+          <span className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-sage-50 text-sage-700 sm:flex">{icon}</span>
+        )}
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-ink sm:text-3xl">{value}</p>
+      <p className="mt-2 font-serif text-3xl tabular-nums text-ink sm:text-4xl">{value}</p>
       {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
     </Card>
   );

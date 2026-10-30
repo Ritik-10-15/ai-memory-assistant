@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Camera, CameraOff, CheckCircle2, Pause, Play, ScanFace, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Camera, CameraOff, CheckCircle2, Loader2, Pause, Play, ScanFace, Upload } from "lucide-react";
 import { api, ApiError } from "@/api/client";
 import type { EnrollReason, Person, PhotoResult } from "@/api/types";
 import {
@@ -14,7 +14,9 @@ import {
   EmptyState,
   ErrorState,
   Spinner,
+  TextField,
 } from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { useAsync } from "@/hooks/useAsync";
 import { ENROLL_MESSAGES, EnrollmentBadge, PageHeader, PhotoPicker, PhotoResults } from "../components";
 import { cameraProblemFrom, grabJpeg, openCamera } from "@/features/patient/useBrowserCamera";
@@ -28,49 +30,18 @@ const CAMERA_ERRORS: Record<string, string> = {
   unavailable: "No camera was found, or another app is using it.",
 };
 
-function PersonPicker() {
-  const people = useAsync(() => api.people(), []);
-  return (
-    <>
-      <PageHeader title="Face enrollment" description="Choose who to enroll. A dozen clear captures from different angles works well." />
-      {people.error ? (
-        <ErrorState message={people.error.message} onRetry={people.reload} />
-      ) : !people.data ? (
-        <Spinner label="Loading people" />
-      ) : !people.data.length ? (
-        <Card>
-          <EmptyState
-            icon={<ScanFace className="h-6 w-6" aria-hidden="true" />}
-            title="No one to enroll yet"
-            description="Add a person first."
-            action={<ButtonLink to="/caregiver/people/add">Add person</ButtonLink>}
-          />
-        </Card>
-      ) : (
-        <Card>
-          <ul className="divide-y divide-line">
-            {people.data.map((p) => (
-              <li key={p.id}>
-                <Link to={`/caregiver/enroll/${p.id}`} className="flex items-center gap-4 px-5 py-4 hover:bg-paper">
-                  <Avatar name={p.name} src={p.photo_count || p.profile_photo_id ? api.personPhotoUrl(p.id, p.profile_photo_id) : null} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-ink">{p.name}</p>
-                    <p className="truncate text-sm text-ink-muted">{p.relationship || "Relationship not set"}</p>
-                  </div>
-                  <EnrollmentBadge person={p} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-    </>
-  );
-}
-
 type Feedback = { tone: "info" | "success" | "warning" | "error"; text: string };
 
-function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; cameraMode: "browser" | "server"; onCaptured: () => void }) {
+export function LiveCapture({
+  person,
+  cameraMode,
+  onCaptured,
+}: {
+  person: Person;
+  cameraMode: "browser" | "server";
+  /** Called with the running total after each accepted capture. */
+  onCaptured: (count: number) => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [cameraState, setCameraState] = useState<"starting" | "ready" | "error">(cameraMode === "server" ? "ready" : "starting");
@@ -78,6 +49,10 @@ function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; camer
   const [running, setRunning] = useState(false);
   const [captured, setCaptured] = useState(0);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+
+  useEffect(() => {
+    if (captured > 0) onCaptured(captured);
+  }, [captured, onCaptured]);
 
   // Open the browser camera for the lifetime of this page.
   useEffect(() => {
@@ -131,7 +106,6 @@ function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; camer
             return next;
           });
           setFeedback({ tone: "success", text: "Captured. Slowly turn your head a little for the next one." });
-          onCaptured();
         } else {
           const reason = (result.reason ?? "no_face") as EnrollReason;
           setFeedback({ tone: "warning", text: ENROLL_MESSAGES[reason] });
@@ -207,8 +181,8 @@ function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; camer
         <div aria-live="polite">{feedback && !done && <Alert tone={feedback.tone}>{feedback.text}</Alert>}</div>
 
         {done ? (
-          <Alert tone="success" title="Enrollment complete">
-            {person.name.split(" ")[0]} will be recognisable within a few seconds, once the new photos are processed.
+          <Alert tone="info" title={`${CAPTURE_TARGET} photos captured`}>
+            Continue to the next step to check that {person.name.split(" ")[0]} can be recognised.
           </Alert>
         ) : (
           <div className="flex flex-wrap gap-3">
@@ -235,7 +209,7 @@ function LiveCapture({ person, cameraMode, onCaptured }: { person: Person; camer
   );
 }
 
-function UploadPhotos({ person, onUploaded }: { person: Person; onUploaded: (p: Person) => void }) {
+export function UploadPhotos({ person, onUploaded }: { person: Person; onUploaded: (p: Person, results: PhotoResult[]) => void }) {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -249,7 +223,7 @@ function UploadPhotos({ person, onUploaded }: { person: Person; onUploaded: (p: 
       const res = await api.updatePerson(person.id, { name, relationship, notes, dob, tts_greeting }, files);
       setResults(res.photos);
       setFiles([]);
-      onUploaded(res.person);
+      onUploaded(res.person, res.photos);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -278,26 +252,297 @@ function UploadPhotos({ person, onUploaded }: { person: Person; onUploaded: (p: 
   );
 }
 
+// ── Wizard ───────────────────────────────────────────────────────────
+export const STEPS = ["Who", "Photos", "Check", "Done"] as const;
+/** Polling for the recognition engine to finish processing new photos. */
+export const CHECK_INTERVAL_MS = 2000;
+export const CHECK_ATTEMPTS = 10;
+/** Live captures needed before the server refreshes its face gallery. */
+export const MIN_CAPTURES = 10;
+
+function WizardSteps({ step }: { step: number }) {
+  return (
+    <ol className="mb-8 grid grid-cols-4 gap-2" aria-label="Enrollment steps">
+      {STEPS.map((label, i) => {
+        const n = i + 1;
+        const done = n < step;
+        const current = n === step;
+        return (
+          <li key={label} aria-current={current ? "step" : undefined} className="min-w-0">
+            <span
+              aria-hidden="true"
+              className={cn("block h-1.5 rounded-full", current ? "bg-primary-600" : done ? "bg-sage-700" : "bg-line")}
+            />
+            <span className={cn("mt-2 flex items-center gap-1.5 text-sm", current ? "font-semibold text-ink" : "text-ink-muted")}>
+              {done ? <CheckCircle2 className="h-4 w-4 shrink-0 text-sage-700" aria-hidden="true" /> : <span aria-hidden="true">{n}.</span>}
+              <span className="truncate">
+                <span className="sr-only">
+                  Step {n} of {STEPS.length}:{" "}
+                </span>
+                {label}
+                {done && <span className="sr-only"> (done)</span>}
+              </span>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** A step heading that receives focus when its step appears. */
+function StepHeading({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLHeadingElement>(null);
+  useEffect(() => ref.current?.focus(), []);
+  return (
+    <h2 ref={ref} tabIndex={-1} className="font-serif text-3xl text-ink outline-none">
+      {children}
+    </h2>
+  );
+}
+
+// Step 1 — choose an existing person or add a new one.
+function StepWho() {
+  const navigate = useNavigate();
+  const people = useAsync(() => api.people(), []);
+  const [name, setName] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function addNew(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) {
+      setNameError("Please enter a name.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await api.createPerson({ name, relationship, notes: "", dob: "", tts_greeting: "" }, []);
+      navigate(`/caregiver/enroll/${res.person.id}`);
+    } catch (err) {
+      setSaveError((err as Error).message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <PageHeader title="Face enrollment" description="Teach the Memory Assistant to recognise someone, in four short steps." />
+      <WizardSteps step={1} />
+      <StepHeading>Who are you enrolling?</StepHeading>
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <Card className="rounded-3xl">
+          <CardHeader title="Someone already added" />
+          {people.error ? (
+            <CardBody>
+              <ErrorState message={people.error.message} onRetry={people.reload} />
+            </CardBody>
+          ) : !people.data ? (
+            <Spinner label="Loading people" />
+          ) : !people.data.length ? (
+            <EmptyState icon={<ScanFace className="h-6 w-6" aria-hidden="true" />} title="No one added yet" description="Add the first person on the right." />
+          ) : (
+            <ul className="divide-y divide-line">
+              {people.data.map((p) => (
+                <li key={p.id}>
+                  <Link to={`/caregiver/enroll/${p.id}`} className="flex items-center gap-4 px-5 py-4 hover:bg-paper">
+                    <Avatar name={p.name} src={p.photo_count || p.profile_photo_id ? api.personPhotoUrl(p.id, p.profile_photo_id) : null} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-ink">{p.name}</span>
+                      <span className="block truncate text-sm text-ink-muted">{p.relationship || "Relationship not set"}</span>
+                    </span>
+                    <EnrollmentBadge person={p} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Card className="rounded-3xl">
+          <CardHeader title="Someone new" description="You can add more details later." />
+          <CardBody>
+            <form onSubmit={addNew} className="space-y-4" noValidate>
+              <TextField
+                label="Full name"
+                required
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameError(null);
+                }}
+                error={nameError}
+                maxLength={120}
+                autoComplete="off"
+              />
+              <TextField
+                label="Relationship to the patient"
+                placeholder="e.g. Daughter, Neighbour, Nurse"
+                value={relationship}
+                onChange={(e) => setRelationship(e.target.value)}
+                maxLength={120}
+              />
+              {saveError && <Alert tone="error">{saveError}</Alert>}
+              <Button type="submit" loading={saving} icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}>
+                Add and continue
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
+      </div>
+    </>
+  );
+}
+
+type CheckState =
+  | { status: "checking"; attempt: number }
+  | { status: "confirmed"; person: Person }
+  | { status: "unchanged"; person: Person } // was already enrolled; new photos added no usable samples
+  | { status: "failed"; person: Person } // still no usable face samples
+  | { status: "error"; message: string };
+
+/**
+ * Step 3 — ask the backend whether the new photos produced usable face
+ * samples. Success is declared only when embedding_count goes up: the
+ * server is the one that decides a person is recognisable.
+ */
+function useEnrollmentCheck(personId: string, baseline: number, nonce: number): CheckState {
+  const [state, setState] = useState<CheckState>({ status: "checking", attempt: 0 });
+  useEffect(() => {
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let attempt = 0;
+    setState({ status: "checking", attempt: 0 });
+    const tick = async () => {
+      attempt += 1;
+      try {
+        const { person } = await api.person(personId);
+        if (stopped) return;
+        if (person.embedding_count > baseline) return setState({ status: "confirmed", person });
+        if (attempt >= CHECK_ATTEMPTS) return setState({ status: baseline > 0 ? "unchanged" : "failed", person });
+        setState({ status: "checking", attempt });
+        timer = setTimeout(tick, CHECK_INTERVAL_MS);
+      } catch (err) {
+        if (!stopped) setState({ status: "error", message: (err as Error).message });
+      }
+    };
+    tick();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [personId, baseline, nonce]);
+  return state;
+}
+
+function StepCheck({ person, baseline, onBack, onDone }: { person: Person; baseline: number; onBack: () => void; onDone: (p: Person) => void }) {
+  const [nonce, setNonce] = useState(0);
+  const check = useEnrollmentCheck(person.id, baseline, nonce);
+  const first = person.name.split(" ")[0];
+  useEffect(() => {
+    if (check.status === "confirmed") onDone(check.person);
+  }, [check, onDone]);
+
+  return (
+    <Card className="max-w-2xl rounded-3xl">
+      <CardBody className="space-y-5">
+        <StepHeading>Checking the photos</StepHeading>
+        {check.status === "checking" && (
+          <div role="status" className="flex items-center gap-3 text-lg text-ink">
+            <Loader2 className="h-6 w-6 animate-spin text-sage-700" aria-hidden="true" />
+            The recognition engine is processing {first}'s photos…
+          </div>
+        )}
+        {check.status === "failed" && (
+          <Alert tone="warning" title={`${first} can't be recognised yet`}>
+            None of the photos produced a usable face. Try again in good, even light, with only {first} in view, looking at the camera.
+          </Alert>
+        )}
+        {check.status === "unchanged" && (
+          <Alert tone="info" title={`${first} is already enrolled`}>
+            {first} can be recognised from earlier photos, but the new ones didn't add usable face samples. You can try again or finish.
+          </Alert>
+        )}
+        {check.status === "error" && (
+          <Alert tone="error" title="Couldn't reach the recognition engine">
+            {check.message}
+          </Alert>
+        )}
+        <div className="flex flex-wrap gap-3">
+          <Button variant="secondary" icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />} onClick={onBack}>
+            Back to photos
+          </Button>
+          {check.status === "error" && <Button onClick={() => setNonce((n) => n + 1)}>Check again</Button>}
+          {check.status === "unchanged" && <ButtonLink to={`/caregiver/people/${person.id}`}>Finish</ButtonLink>}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function StepDone({ person, baseline }: { person: Person; baseline: number }) {
+  const first = person.name.split(" ")[0];
+  const added = person.embedding_count - baseline;
+  return (
+    <Card className="max-w-2xl rounded-3xl">
+      <CardBody className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+        <Avatar name={person.name} src={api.personPhotoUrl(person.id, person.profile_photo_id)} size="xl" />
+        <div className="space-y-3">
+          <StepHeading>{first} can now be recognised</StepHeading>
+          <p className="text-lg text-ink-muted">
+            The recognition engine confirmed {added} new usable face sample{added === 1 ? "" : "s"} ({person.embedding_count} in total).
+          </p>
+          <div className="flex flex-wrap gap-3 pt-1">
+            <ButtonLink to={`/caregiver/people/${person.id}`}>View {first}'s profile</ButtonLink>
+            <ButtonLink to="/caregiver/enroll" variant="secondary">
+              Enroll someone else
+            </ButtonLink>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+const TIPS = [
+  "Only the person being enrolled should be in view.",
+  "Face a window or lamp — avoid strong light behind them.",
+  "Sit about an arm's length from the camera.",
+  "Look straight ahead first, then slowly turn a little left and right.",
+];
+
+/** FaceEnrollmentWizard: Who → Photos → Check → Done. */
 export function EnrollmentPage() {
   const { id } = useParams();
-  const detail = useAsync(() => (id ? api.person(id) : Promise.resolve(null)), [id]);
+  if (!id) return <StepWho />;
+  return <EnrollPerson key={id} id={id} />;
+}
+
+function EnrollPerson({ id }: { id: string }) {
+  const detail = useAsync(() => api.person(id), [id]);
   const status = useAsync(() => api.status(), []);
+  const [phase, setPhase] = useState<"photos" | "check" | "done">("photos");
+  const [captured, setCaptured] = useState(0);
+  const [uploaded, setUploaded] = useState(0);
+  const [confirmed, setConfirmed] = useState<Person | null>(null);
+  // Usable samples before this session — success means the server reports more.
+  const baseline = useRef<number | null>(null);
+  if (detail.data && baseline.current === null) baseline.current = detail.data.person.embedding_count;
 
-  // Refresh the enrollment badge a moment after captures (gallery reload is async).
-  const refreshTimer = useRef<ReturnType<typeof setTimeout>>();
-  const { reload } = detail;
-  const onCaptured = useRef(() => {
-    clearTimeout(refreshTimer.current);
-    refreshTimer.current = setTimeout(reload, 4000);
-  }).current;
-  useEffect(() => () => clearTimeout(refreshTimer.current), []);
+  const onCaptured = useCallback((n: number) => setCaptured(n), []);
+  const onDone = useCallback((p: Person) => {
+    setConfirmed(p);
+    setPhase("done");
+  }, []);
 
-  if (!id) return <PersonPicker />;
   if (detail.error) {
+    const missing = detail.error instanceof ApiError && detail.error.status === 404;
     return (
       <>
         <PageHeader title="Face enrollment" />
-        <ErrorState message={detail.error.message} onRetry={detail.reload} />
+        {missing ? <Alert tone="warning">This person no longer exists.</Alert> : <ErrorState message={detail.error.message} onRetry={detail.reload} />}
       </>
     );
   }
@@ -306,6 +551,10 @@ export function EnrollmentPage() {
   }
 
   const person = detail.data.person;
+  const first = person.name.split(" ")[0];
+  const ready = captured >= MIN_CAPTURES || uploaded > 0;
+  const step = phase === "photos" ? 2 : phase === "check" ? 3 : 4;
+
   return (
     <>
       <ButtonLink to="/caregiver/enroll" variant="ghost" size="sm" className="-ml-3 mb-2" icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}>
@@ -322,38 +571,40 @@ export function EnrollmentPage() {
           </span>
         }
       />
+      <WizardSteps step={step} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <LiveCapture person={person} cameraMode={status.data.camera_mode} onCaptured={onCaptured} />
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="For the best results" />
-            <CardBody>
-              <ul className="space-y-2.5 text-[15px] text-ink">
-                {[
-                  "Only the person being enrolled should be in view.",
-                  "Face a window or lamp — avoid strong light behind them.",
-                  "Sit about an arm's length from the camera.",
-                  "Look straight ahead first, then slowly turn a little left and right.",
-                  "Try a neutral face, a smile, and talking.",
-                ].map((tip) => (
-                  <li key={tip} className="flex gap-2.5">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-sage-600" aria-hidden="true" />
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </CardBody>
-          </Card>
-          <UploadPhotos
-            person={person}
-            onUploaded={(p) => {
-              detail.setData((prev) => (prev ? { ...prev, person: p } : prev));
-              onCaptured();
-            }}
-          />
-        </div>
-      </div>
+      {phase === "photos" && (
+        <>
+          <StepHeading>Add photos of {first}</StepHeading>
+          <ul className="mt-3 grid gap-x-6 gap-y-1.5 text-[15px] text-ink-muted sm:grid-cols-2">
+            {TIPS.map((t) => (
+              <li key={t} className="flex gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-sage-700" aria-hidden="true" />
+                {t}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+            <LiveCapture person={person} cameraMode={status.data.camera_mode} onCaptured={onCaptured} />
+            <UploadPhotos person={person} onUploaded={(_p, results) => setUploaded((n) => n + results.filter((r) => r.status === "accepted").length)} />
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-4 rounded-3xl border border-line bg-card p-5">
+            <Button disabled={!ready} onClick={() => setPhase("check")} icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}>
+              Check enrollment
+            </Button>
+            <p className="text-[15px] text-ink-muted" role="status">
+              {ready
+                ? `${captured} captured · ${uploaded} uploaded. Ready to check.`
+                : captured > 0
+                  ? `${captured} of at least ${MIN_CAPTURES} captures — keep going, or upload photos instead.`
+                  : `Capture at least ${MIN_CAPTURES} photos with the camera, or upload one or more.`}
+            </p>
+          </div>
+        </>
+      )}
+
+      {phase === "check" && <StepCheck person={person} baseline={baseline.current ?? 0} onBack={() => setPhase("photos")} onDone={onDone} />}
+      {phase === "done" && confirmed && <StepDone person={confirmed} baseline={baseline.current ?? 0} />}
     </>
   );
 }
