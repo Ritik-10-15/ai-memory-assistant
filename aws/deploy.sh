@@ -42,44 +42,56 @@ wait_ready() {
 running_version() {   # what is actually serving now, whatever git's checkout says
   compose exec -T app python -c "
 import json, urllib.request
-print(json.load(urllib.request.urlopen('http://localhost:8000/readyz', timeout=5))['version'])" 2>/dev/null
+import urllib.error
+try:
+    r = urllib.request.urlopen('http://localhost:8000/readyz', timeout=5)
+except urllib.error.HTTPError as e:   # 503 while not ready still names the version
+    r = e
+print(json.load(r)['version'])" 2>/dev/null
 }
 
-PREV=$(running_version || true)
-if [ -z "$PREV" ] || [ "$PREV" = "dev" ] || ! git cat-file -e "$PREV^{commit}" 2>/dev/null; then
-  PREV=$(git rev-parse --short HEAD)    # nothing running, or an image from before version tags
-fi
-git fetch -q origin
-git checkout -q --detach "$REF"
-NEW=$(git rev-parse --short HEAD)
-echo "Releasing $NEW (running: $PREV)"
+# The release checks out other commits, which can rewrite this very file;
+# bash reads scripts as it goes, so all the work happens inside main(),
+# parsed in full before it runs.
+main() {
+  PREV=$(running_version || true)
+  if [ -z "$PREV" ] || [ "$PREV" = "dev" ] || ! git cat-file -e "$PREV^{commit}" 2>/dev/null; then
+    PREV=$(git rev-parse --short HEAD)    # nothing running, or an image from before version tags
+  fi
+  git fetch -q origin
+  git checkout -q --detach "$REF"
+  NEW=$(git rev-parse --short HEAD)
+  echo "Releasing $NEW (running: $PREV)"
 
-export APP_VERSION=$NEW
-compose build app
+  export APP_VERSION=$NEW
+  compose build app
 
-mkdir -p "$BACKUP_DIR" && chown 10001:10001 "$BACKUP_DIR" 2>/dev/null || true
-echo "Backing up data before the release"
-compose run --rm --no-deps -v "$BACKUP_DIR:/backups" app python scripts/backup.py create /backups \
-  || echo "No backup made (fresh install or no database yet)"
+  mkdir -p "$BACKUP_DIR" && chown 10001:10001 "$BACKUP_DIR" 2>/dev/null || true
+  echo "Backing up data before the release"
+  compose run --rm --no-deps -v "$BACKUP_DIR:/backups" app python scripts/backup.py create /backups \
+    || echo "No backup made (fresh install or no database yet)"
 
-compose up -d
-if wait_ready "$NEW"; then
-  echo "Release $NEW is healthy"
-  exit 0
-fi
-
-echo "Release $NEW did not become ready within ${READY_TIMEOUT}s; rolling back to $PREV" >&2
-compose logs --tail 50 app >&2 || true
-git checkout -q --detach "$PREV"
-export APP_VERSION=$PREV
-if docker image inspect "memory-assistant:$PREV" >/dev/null 2>&1; then
   compose up -d
-else
-  compose up -d --build          # the previous version predates per-commit image tags
-fi
-if wait_ready "$PREV"; then
-  echo "Rolled back to $PREV" >&2
-else
-  echo "Rollback to $PREV is not ready either: check 'docker compose logs app'" >&2
-fi
-exit 1
+  if wait_ready "$NEW"; then
+    echo "Release $NEW is healthy"
+    exit 0
+  fi
+
+  echo "Release $NEW did not become ready within ${READY_TIMEOUT}s; rolling back to $PREV" >&2
+  compose logs --tail 50 app >&2 || true
+  git checkout -q --detach "$PREV"
+  export APP_VERSION=$PREV
+  if docker image inspect "memory-assistant:$PREV" >/dev/null 2>&1; then
+    compose up -d
+  else
+    compose up -d --build          # the previous version predates per-commit image tags
+  fi
+  if wait_ready "$PREV"; then
+    echo "Rolled back to $PREV" >&2
+  else
+    echo "Rollback to $PREV is not ready either: check 'docker compose logs app'" >&2
+  fi
+  exit 1
+}
+
+main "$@"; exit $?
