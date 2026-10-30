@@ -11,6 +11,7 @@ import pytest
 
 import config
 import database
+import vision
 import worker
 
 A_SCORE, B_STRONG, B_WEAK, STRANGER = 0.70, 0.65, 0.34, 0.10
@@ -26,7 +27,8 @@ def people(temp_db, monkeypatch):
                   (b, "John", "Neighbour", "Brings the paper"))
         c.execute("INSERT INTO memories (person_id, summary) VALUES (?, 'You talked about the roses.')", (a,))
         c.execute("INSERT INTO memories (person_id, summary) VALUES (?, 'You watched the football.')", (b,))
-    monkeypatch.setattr(worker, "_name_map", {a: "Sarah", b: "John"})
+    # Replace the map the way load_known_faces() does on every gallery reload.
+    monkeypatch.setattr(vision, "_name_map", {a: "Sarah", b: "John"})
     monkeypatch.setattr(worker.visit_tracker, "seen", lambda *a, **k: None)
     worker.reset_state()
     yield a, b
@@ -35,13 +37,26 @@ def people(temp_db, monkeypatch):
 
 def frame(pid=None, score=0.0, face=True, names=None):
     """Feed one synthetic frame and return a copy of the resulting detection."""
-    name = (names or worker._name_map).get(pid) if pid else None
+    name = (names or vision._name_map).get(pid) if pid else None
     worker._step(pid, score, name, face)
     with worker.det_lock:
         return dict(worker.detection)
 
 
 # ── behaviour that must be kept ──────────────────────────────────────
+def test_a_bridged_frame_keeps_the_name_after_a_gallery_reload(people):
+    """Phase 8 defect: the worker kept the name map it imported at startup,
+    but load_known_faces() replaces it. Bridged frames (blink, turned head,
+    visitor stepping away) then reported a confirmed person with no name,
+    which the patient screen shows as "I don't recognise this person"."""
+    a, _ = people
+    for _ in range(3):
+        frame(a, A_SCORE)
+    d = frame(None, face=False)
+    assert d["state"] == "high" and d["person_id"] == a
+    assert d["name"] == "Sarah"
+
+
 def test_a_known_face_is_confirmed_after_consecutive_frames(people):
     a, _ = people
     states = [frame(a, A_SCORE)["state"] for _ in range(3)]

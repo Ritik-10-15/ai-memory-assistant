@@ -204,3 +204,18 @@ def test_per_person_lookups_use_an_index(temp_db):
                     "SELECT summary FROM memories WHERE person_id='x' ORDER BY created_at DESC LIMIT 3"):
             plan = " ".join(r[-1] for r in c.execute("EXPLAIN QUERY PLAN " + sql))
             assert "USING" in plan and "INDEX" in plan, (sql, plan)
+
+
+def test_visit_history_and_analytics_read_an_index(temp_db):
+    """Migration 3: listing every visit newest first must walk an index, not
+    sort the table; per-person analytics must not touch the table at all."""
+    with database.get_db() as c:
+        def plan(sql):
+            return " | ".join(r[-1] for r in c.execute("EXPLAIN QUERY PLAN " + sql))
+        history = plan("SELECT v.*, p.name FROM visits v JOIN people p ON p.id=v.person_id "
+                       "ORDER BY v.started_at DESC LIMIT 200")
+        assert "idx_visits_started" in history and "TEMP B-TREE" not in history, history
+        per_person = plan("SELECT p.id, COUNT(v.id), AVG(v.duration_s), MAX(v.started_at) "
+                          "FROM people p LEFT JOIN visits v ON p.id=v.person_id GROUP BY p.id")
+        assert "COVERING INDEX idx_visits_person" in per_person, per_person
+

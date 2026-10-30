@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { api } from "@/api/client";
 import type { FrameResult } from "@/api/types";
 import type { CameraProblem } from "./recognitionView";
@@ -33,13 +33,44 @@ export function grabJpeg(video: HTMLVideoElement, paper: HTMLCanvasElement, qual
 }
 
 /**
+ * The latest face box from /api/frame. Only the camera overlay needs it, and
+ * it changes several times a second, so it lives outside React state: the
+ * overlay subscribes (useFrame) and the rest of the patient screen does not
+ * re-render for every frame.
+ */
+export interface FrameStore {
+  get: () => FrameResult | null;
+  subscribe: (onChange: () => void) => () => void;
+}
+
+export function createFrameStore(): FrameStore & { set: (f: FrameResult | null) => void } {
+  let current: FrameResult | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    set: (f) => {
+      current = f;
+      listeners.forEach((l) => l());
+    },
+    subscribe: (onChange) => {
+      listeners.add(onChange);
+      return () => listeners.delete(onChange);
+    },
+  };
+}
+
+export function useFrame(frames: FrameStore): FrameResult | null {
+  return useSyncExternalStore(frames.subscribe, frames.get);
+}
+
+/**
  * Browser-camera mode: stream the webcam into `videoRef` and post frames to
  * /api/frame, which feeds the server's recognition worker. Stops the camera
  * and all uploads on unmount or when `active` becomes false (e.g. hidden tab).
  */
 export function useBrowserCamera(videoRef: RefObject<HTMLVideoElement>, active: boolean) {
   const [status, setStatus] = useState<CameraStatus>("idle");
-  const [frame, setFrame] = useState<FrameResult | null>(null);
+  const [frames] = useState(createFrameStore);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -57,11 +88,11 @@ export function useBrowserCamera(videoRef: RefObject<HTMLVideoElement>, active: 
       if (blob && !stopped) {
         controller = new AbortController();
         try {
-          setFrame(await api.sendFrame(blob, controller.signal));
+          frames.set(await api.sendFrame(blob, controller.signal));
         } catch {
           // Upload failures surface through the recognition poll's
           // service-unavailable state; keep trying.
-          if (!stopped) setFrame(null);
+          if (!stopped) frames.set(null);
         }
       }
       if (!stopped) timer = setTimeout(loop, FRAME_GAP_MS);
@@ -91,10 +122,10 @@ export function useBrowserCamera(videoRef: RefObject<HTMLVideoElement>, active: 
       controller?.abort();
       stream?.getTracks().forEach((t) => t.stop());
       if (videoRef.current) videoRef.current.srcObject = null;
-      setFrame(null);
+      frames.set(null);
       setStatus("idle");
     };
-  }, [active, videoRef]);
+  }, [active, videoRef, frames]);
 
-  return { status, frame };
+  return { status, frames };
 }

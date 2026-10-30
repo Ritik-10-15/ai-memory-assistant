@@ -2,7 +2,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import { Camera, CameraOff, Loader2 } from "lucide-react";
 import type { FrameResult } from "@/api/types";
 import { cn } from "@/lib/cn";
-import type { CameraStatus } from "./useBrowserCamera";
+import { useFrame, type CameraStatus, type FrameStore } from "./useBrowserCamera";
 import type { PatientView } from "./recognitionView";
 
 const BOX_COLORS: Record<string, string> = {
@@ -68,7 +68,7 @@ interface CameraPanelProps {
   mode: "browser" | "server" | undefined;
   videoRef: RefObject<HTMLVideoElement>;
   browserStatus: CameraStatus;
-  frame: FrameResult | null;
+  frames: FrameStore;
   view: PatientView;
   serverFeedActive: boolean;
   onServerFeedError: () => void;
@@ -78,12 +78,13 @@ export function CameraPanel({
   mode,
   videoRef,
   browserStatus,
-  frame,
+  frames,
   view,
   serverFeedActive,
   onServerFeedError,
 }: CameraPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frame = useFrame(frames);
 
   useEffect(() => {
     if (canvasRef.current && mode === "browser") drawOverlay(canvasRef.current, frame, view);

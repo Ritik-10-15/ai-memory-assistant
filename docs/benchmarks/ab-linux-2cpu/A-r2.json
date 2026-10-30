@@ -1,0 +1,845 @@
+{
+ "cold": {
+  "import services (optional speech/LLM libraries)": {
+   "n": 3,
+   "unit": "ms",
+   "median": 480.565,
+   "p95": 579.258,
+   "min": 444.9,
+   "max": 579.258,
+   "mean": 501.574
+  },
+  "import app (all modules, incl. services)": {
+   "n": 3,
+   "unit": "ms",
+   "median": 635.593,
+   "p95": 742.992,
+   "min": 577.64,
+   "max": 742.992,
+   "mean": 652.075
+  },
+  "load YuNet + SFace models": {
+   "n": 3,
+   "unit": "ms",
+   "median": 101.587,
+   "p95": 107.244,
+   "min": 99.876,
+   "max": 107.244,
+   "mean": 102.902
+  },
+  "whisper_installed": false
+ },
+ "memory": {
+  "RSS before models (MB, includes optional libraries)": 80.5,
+  "RSS added by YuNet + SFace (MB)": 64.3
+ },
+ "meta": {
+  "label": "ab-linux-A-r2",
+  "sections": [
+   "cold",
+   "recognition",
+   "pipeline",
+   "api",
+   "sqlite"
+  ],
+  "cpu": "",
+  "logical_cpus": 12,
+  "cores_used": 12,
+  "os": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+  "python": "3.12.16",
+  "opencv": "5.0.0",
+  "numpy": "2.5.4",
+  "flask": "3.1.3",
+  "sqlite": "3.46.1",
+  "date": "2026-10-30 21:48"
+ },
+ "recognition": {
+  "YuNet detection": {
+   "n": 100,
+   "unit": "ms",
+   "median": 10.378,
+   "p95": 14.58,
+   "min": 7.89,
+   "max": 15.766,
+   "mean": 10.731
+  },
+  "JPEG decode (browser frame)": {
+   "n": 100,
+   "unit": "ms",
+   "median": 0.867,
+   "p95": 1.14,
+   "min": 0.735,
+   "max": 1.483,
+   "mean": 0.905
+  },
+  "SFace align + embedding": {
+   "n": 100,
+   "unit": "ms",
+   "median": 9.841,
+   "p95": 13.326,
+   "min": 8.395,
+   "max": 17.271,
+   "mean": 10.29
+  },
+  "recognize() gallery 1 people x 10": {
+   "n": 60,
+   "unit": "ms",
+   "median": 10.009,
+   "p95": 13.165,
+   "min": 8.755,
+   "max": 15.61,
+   "mean": 10.403
+  },
+  "recognize() gallery 10 people x 10": {
+   "n": 60,
+   "unit": "ms",
+   "median": 10.536,
+   "p95": 14.82,
+   "min": 8.871,
+   "max": 16.913,
+   "mean": 11.081
+  },
+  "recognize() gallery 50 people x 10": {
+   "n": 60,
+   "unit": "ms",
+   "median": 10.626,
+   "p95": 12.907,
+   "min": 9.08,
+   "max": 15.398,
+   "mean": 10.807
+  },
+  "recognize() gallery 200 people x 10": {
+   "n": 60,
+   "unit": "ms",
+   "median": 12.764,
+   "p95": 17.226,
+   "min": 11.036,
+   "max": 20.398,
+   "mean": 13.101
+  },
+  "recognize() gallery 500 people x 10": {
+   "n": 60,
+   "unit": "ms",
+   "median": 17.937,
+   "p95": 21.368,
+   "min": 14.644,
+   "max": 24.043,
+   "mean": 18.058
+  }
+ },
+ "pipeline:server-camera 30fps, 30 people": {
+  "frames offered by producer": 1425,
+  "frames recognised by worker": 1425,
+  "producer rate (frames/s)": 29.56,
+  "consumer rate (frames/s)": 29.56,
+  "frames never recognised (%)": 0.0,
+  "frame age when recognition starts": {
+   "n": 1422,
+   "unit": "ms",
+   "median": 0.093,
+   "p95": 0.32,
+   "min": 0.037,
+   "max": 20.082,
+   "mean": 0.402
+  },
+  "worker time per frame (recognise + state)": {
+   "n": 1422,
+   "unit": "ms",
+   "median": 0.046,
+   "p95": 29.979,
+   "min": 0.019,
+   "max": 60.716,
+   "mean": 6.745
+  },
+  "worker idle wait per frame": {
+   "n": 1422,
+   "unit": "ms",
+   "median": 32.033,
+   "p95": 38.168,
+   "min": 0.011,
+   "max": 65.8,
+   "mean": 27.073
+  },
+  "queue depth (sampled every ms)": {
+   "n": 40588,
+   "unit": "frames",
+   "median": 0.0,
+   "p95": 0,
+   "min": 0,
+   "max": 1,
+   "mean": 0.01
+  },
+  "process CPU (% of one core)": 101.3,
+  "visitor appears -> state 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 56.72,
+   "p95": 67.234,
+   "min": 22.864,
+   "max": 67.234,
+   "mean": 52.715
+  },
+  "visitor leaves -> state no longer 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 414.318,
+   "p95": 434.881,
+   "min": 411.971,
+   "max": 434.881,
+   "mean": 417.239
+  },
+  "memory RSS after (MB)": 224.6,
+  "log output (bytes)": 17589,
+  "log output (lines)": 533
+ },
+ "pipeline:patient device (browser cadence), 30 people": {
+  "frames offered by producer": 305,
+  "frames recognised by worker": 305,
+  "producer rate (frames/s)": 6.2,
+  "consumer rate (frames/s)": 6.2,
+  "frames never recognised (%)": 0.0,
+  "frame age when recognition starts": {
+   "n": 302,
+   "unit": "ms",
+   "median": 0.459,
+   "p95": 0.655,
+   "min": 0.302,
+   "max": 0.961,
+   "mean": 0.472
+  },
+  "worker time per frame (recognise + state)": {
+   "n": 302,
+   "unit": "ms",
+   "median": 0.397,
+   "p95": 14.158,
+   "min": 0.018,
+   "max": 19.503,
+   "mean": 4.083
+  },
+  "worker idle wait per frame": {
+   "n": 302,
+   "unit": "ms",
+   "median": 159.255,
+   "p95": 162.616,
+   "min": 141.055,
+   "max": 174.22,
+   "mean": 157.009
+  },
+  "queue depth (sampled every ms)": {
+   "n": 40759,
+   "unit": "frames",
+   "median": 0,
+   "p95": 0,
+   "min": 0,
+   "max": 1,
+   "mean": 0.001
+  },
+  "process CPU (% of one core)": 18.5,
+  "visitor appears -> state 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 181.169,
+   "p95": 192.229,
+   "min": 35.364,
+   "max": 192.229,
+   "mean": 158.822
+  },
+  "visitor leaves -> state no longer 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 1942.209,
+   "p95": 1979.92,
+   "min": 1934.421,
+   "max": 1979.92,
+   "mean": 1947.584
+  },
+  "end-to-end: appears -> patient poll shows them": {
+   "n": 6,
+   "unit": "ms",
+   "median": 639.368,
+   "p95": 872.106,
+   "min": 366.393,
+   "max": 872.106,
+   "mean": 614.237
+  },
+  "end-to-end: leaves -> patient poll stops showing them": {
+   "n": 6,
+   "unit": "ms",
+   "median": 2327.891,
+   "p95": 2617.172,
+   "min": 1997.323,
+   "max": 2617.172,
+   "mean": 2331.393
+  },
+  "memory RSS after (MB)": 224.8,
+  "log output (bytes)": 3762,
+  "log output (lines)": 114
+ },
+ "pipeline:overload 30fps, 500 people": {
+  "frames offered by producer": 1440,
+  "frames recognised by worker": 1440,
+  "producer rate (frames/s)": 29.83,
+  "consumer rate (frames/s)": 29.83,
+  "frames never recognised (%)": 0.0,
+  "frame age when recognition starts": {
+   "n": 1437,
+   "unit": "ms",
+   "median": 0.088,
+   "p95": 0.221,
+   "min": 0.038,
+   "max": 16.575,
+   "mean": 0.175
+  },
+  "worker time per frame (recognise + state)": {
+   "n": 1437,
+   "unit": "ms",
+   "median": 0.041,
+   "p95": 22.77,
+   "min": 0.019,
+   "max": 74.302,
+   "mean": 6.941
+  },
+  "worker idle wait per frame": {
+   "n": 1437,
+   "unit": "ms",
+   "median": 32.507,
+   "p95": 35.718,
+   "min": 0.01,
+   "max": 43.863,
+   "mean": 26.568
+  },
+  "queue depth (sampled every ms)": {
+   "n": 41061,
+   "unit": "frames",
+   "median": 0,
+   "p95": 0,
+   "min": 0,
+   "max": 1,
+   "mean": 0.004
+  },
+  "process CPU (% of one core)": 82.9,
+  "visitor appears -> state 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 61.998,
+   "p95": 79.77,
+   "min": 24.542,
+   "max": 79.77,
+   "mean": 60.176
+  },
+  "visitor leaves -> state no longer 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 411.598,
+   "p95": 415.773,
+   "min": 409.683,
+   "max": 415.773,
+   "mean": 411.95
+  },
+  "memory RSS after (MB)": 225.1,
+  "log output (bytes)": 17820,
+  "log output (lines)": 540
+ },
+ "pipeline:slow device 30fps (+60 ms per recognition), FIFO queue of 2 (before Phase 8)": {
+  "frames offered by producer": 1440,
+  "frames recognised by worker": 1142,
+  "producer rate (frames/s)": 29.8,
+  "consumer rate (frames/s)": 23.64,
+  "frames never recognised (%)": 20.7,
+  "frame age when recognition starts": {
+   "n": 1139,
+   "unit": "ms",
+   "median": 0.114,
+   "p95": 142.277,
+   "min": 0.036,
+   "max": 185.322,
+   "mean": 29.807
+  },
+  "worker time per frame (recognise + state)": {
+   "n": 1139,
+   "unit": "ms",
+   "median": 0.034,
+   "p95": 75.386,
+   "min": 0.019,
+   "max": 114.838,
+   "mean": 16.644
+  },
+  "worker idle wait per frame": {
+   "n": 1139,
+   "unit": "ms",
+   "median": 33.134,
+   "p95": 36.332,
+   "min": 0.003,
+   "max": 55.145,
+   "mean": 25.552
+  },
+  "queue depth (sampled every ms)": {
+   "n": 40695,
+   "unit": "frames",
+   "median": 0,
+   "p95": 2,
+   "min": 0,
+   "max": 2,
+   "mean": 0.703
+  },
+  "process CPU (% of one core)": 65.2,
+  "visitor appears -> state 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 160.335,
+   "p95": 188.803,
+   "min": 85.471,
+   "max": 188.803,
+   "mean": 151.843
+  },
+  "visitor leaves -> state no longer 'high'": {
+   "n": 6,
+   "unit": "ms",
+   "median": 514.947,
+   "p95": 547.623,
+   "min": 511.36,
+   "max": 547.623,
+   "mean": 524.548
+  },
+  "memory RSS after (MB)": 226.0
+ },
+ "api": {
+  "seed: 30 people, 1500 memories, 20000 visits, 360 photos (s)": 0.2,
+  "GET /api/current-person": {
+   "n": 100,
+   "unit": "ms",
+   "median": 0.171,
+   "p95": 0.274,
+   "min": 0.133,
+   "max": 0.486,
+   "mean": 0.182,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 241
+  },
+  "POST /api/frame": {
+   "n": 100,
+   "unit": "ms",
+   "median": 17.426,
+   "p95": 25.583,
+   "min": 14.526,
+   "max": 31.549,
+   "mean": 18.797,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 51
+  },
+  "GET /api/status": {
+   "n": 100,
+   "unit": "ms",
+   "median": 0.202,
+   "p95": 0.518,
+   "min": 0.161,
+   "max": 0.781,
+   "mean": 0.241,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 135
+  },
+  "GET /api/family": {
+   "n": 100,
+   "unit": "ms",
+   "median": 1.864,
+   "p95": 2.647,
+   "min": 1.503,
+   "max": 3.507,
+   "mean": 1.979,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 12442
+  },
+  "GET /api/family/<id>": {
+   "n": 100,
+   "unit": "ms",
+   "median": 1.635,
+   "p95": 2.534,
+   "min": 1.145,
+   "max": 3.18,
+   "mean": 1.69,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 25648
+  },
+  "GET /api/album (Memories page)": {
+   "n": 100,
+   "unit": "ms",
+   "median": 6.994,
+   "p95": 9.386,
+   "min": 5.906,
+   "max": 12.024,
+   "mean": 7.3,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 220590
+  },
+  "GET /api/albums": {
+   "n": 100,
+   "unit": "ms",
+   "median": 0.63,
+   "p95": 1.409,
+   "min": 0.436,
+   "max": 3.067,
+   "mean": 0.757,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 1994
+  },
+  "GET /api/albums/<id> (30 photos)": {
+   "n": 100,
+   "unit": "ms",
+   "median": 1.115,
+   "p95": 2.338,
+   "min": 0.845,
+   "max": 3.351,
+   "mean": 1.296,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 15122
+  },
+  "GET photo thumbnail": {
+   "n": 100,
+   "unit": "ms",
+   "median": 0.709,
+   "p95": 1.531,
+   "min": 0.538,
+   "max": 2.385,
+   "mean": 0.826,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 6108
+  },
+  "GET photo full size": {
+   "n": 100,
+   "unit": "ms",
+   "median": 0.704,
+   "p95": 1.118,
+   "min": 0.583,
+   "max": 2.157,
+   "mean": 0.801,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 54569
+  },
+  "GET /api/caregiver/people": {
+   "n": 100,
+   "unit": "ms",
+   "median": 3.279,
+   "p95": 5.19,
+   "min": 2.589,
+   "max": 6.275,
+   "mean": 3.563,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 11272
+  },
+  "GET /api/caregiver/people/<id>": {
+   "n": 100,
+   "unit": "ms",
+   "median": 1.122,
+   "p95": 2.06,
+   "min": 0.94,
+   "max": 3.522,
+   "mean": 1.272,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 18860
+  },
+  "GET /api/caregiver/memories": {
+   "n": 100,
+   "unit": "ms",
+   "median": 3.934,
+   "p95": 4.941,
+   "min": 3.091,
+   "max": 35.16,
+   "mean": 4.329,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 141971
+  },
+  "GET /api/caregiver/visits": {
+   "n": 100,
+   "unit": "ms",
+   "median": 7.063,
+   "p95": 8.439,
+   "min": 6.065,
+   "max": 10.407,
+   "mean": 7.18,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 43132
+  },
+  "GET /api/caregiver/analytics": {
+   "n": 100,
+   "unit": "ms",
+   "median": 12.666,
+   "p95": 15.807,
+   "min": 10.113,
+   "max": 19.307,
+   "mean": 12.869,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 5259
+  },
+  "GET /api/caregiver/albums": {
+   "n": 100,
+   "unit": "ms",
+   "median": 0.682,
+   "p95": 1.275,
+   "min": 0.493,
+   "max": 2.816,
+   "mean": 0.773,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 3161
+  },
+  "GET /api/caregiver/photos": {
+   "n": 100,
+   "unit": "ms",
+   "median": 6.528,
+   "p95": 8.43,
+   "min": 5.207,
+   "max": 30.507,
+   "mean": 6.906,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 204297
+  },
+  "POST /api/caregiver/memories": {
+   "n": 100,
+   "unit": "ms",
+   "median": 5.307,
+   "p95": 6.671,
+   "min": 4.181,
+   "max": 11.214,
+   "mean": 5.451,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 188
+  },
+  "PATCH /api/caregiver/albums/<id>": {
+   "n": 100,
+   "unit": "ms",
+   "median": 1.449,
+   "p95": 2.516,
+   "min": 1.034,
+   "max": 3.604,
+   "mean": 1.634,
+   "failures": 0,
+   "requests": 100,
+   "bytes": 17306
+  },
+  "memory RSS after (MB)": 284.3
+ },
+ "sqlite": {
+  "open connection (get_db)": {
+   "n": 300,
+   "unit": "ms",
+   "median": 0.095,
+   "p95": 0.128,
+   "min": 0.086,
+   "max": 0.312,
+   "mean": 0.101
+  },
+  "caregiver visits list @ 20000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 5.794,
+   "p95": 6.718,
+   "min": 5.233,
+   "max": 7.747,
+   "mean": 5.904,
+   "plan": [
+    "SCAN v USING INDEX idx_visits_person",
+    "SEARCH p USING INDEX sqlite_autoindex_people_1 (id=?)",
+    "USE TEMP B-TREE FOR ORDER BY"
+   ]
+  },
+  "caregiver memories list @ 20000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 2.038,
+   "p95": 2.975,
+   "min": 1.739,
+   "max": 3.861,
+   "mean": 2.183,
+   "plan": [
+    "SCAN m USING INDEX idx_memories_person",
+    "SEARCH p USING INDEX sqlite_autoindex_people_1 (id=?)",
+    "USE TEMP B-TREE FOR ORDER BY"
+   ]
+  },
+  "analytics: last 30 days @ 20000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 1.19,
+   "p95": 1.587,
+   "min": 1.061,
+   "max": 1.708,
+   "mean": 1.26,
+   "plan": [
+    "SCAN visits USING COVERING INDEX idx_visits_person",
+    "USE TEMP B-TREE FOR GROUP BY"
+   ]
+  },
+  "analytics: per person @ 20000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 8.359,
+   "p95": 10.207,
+   "min": 7.14,
+   "max": 10.759,
+   "mean": 8.502,
+   "plan": [
+    "SCAN p USING COVERING INDEX sqlite_autoindex_people_1",
+    "SEARCH v USING INDEX idx_visits_person (person_id=?) LEFT-JOIN"
+   ]
+  },
+  "people list (counts) @ 20000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 0.668,
+   "p95": 0.84,
+   "min": 0.585,
+   "max": 0.84,
+   "mean": 0.676,
+   "plan": [
+    "SCAN p",
+    "CORRELATED SCALAR SUBQUERY 1",
+    "SEARCH m USING COVERING INDEX idx_memories_person (person_id=?)",
+    "CORRELATED SCALAR SUBQUERY 2",
+    "SEARCH v USING COVERING INDEX idx_visits_person (person_id=?)",
+    "CORRELATED SCALAR SUBQUERY 3",
+    "SEARCH v USING COVERING INDEX idx_visits_person (person_id=?)"
+   ]
+  },
+  "recognised person details @ 20000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 0.004,
+   "p95": 0.006,
+   "min": 0.003,
+   "max": 0.006,
+   "mean": 0.004,
+   "plan": [
+    "SEARCH visits USING INDEX idx_visits_person (person_id=?)"
+   ]
+  },
+  "patient recent visits @ 20000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 4.282,
+   "p95": 5.474,
+   "min": 3.616,
+   "max": 5.537,
+   "mean": 4.316,
+   "plan": [
+    "SCAN v USING INDEX idx_visits_person",
+    "SEARCH p USING INDEX sqlite_autoindex_people_1 (id=?)",
+    "USE TEMP B-TREE FOR ORDER BY"
+   ]
+  },
+  "caregiver visits list @ 100000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 26.268,
+   "p95": 29.768,
+   "min": 24.304,
+   "max": 31.236,
+   "mean": 26.686,
+   "plan": [
+    "SCAN v USING INDEX idx_visits_person",
+    "SEARCH p USING INDEX sqlite_autoindex_people_1 (id=?)",
+    "USE TEMP B-TREE FOR ORDER BY"
+   ]
+  },
+  "caregiver memories list @ 100000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 2.011,
+   "p95": 2.466,
+   "min": 1.813,
+   "max": 2.542,
+   "mean": 2.043,
+   "plan": [
+    "SCAN m USING INDEX idx_memories_person",
+    "SEARCH p USING INDEX sqlite_autoindex_people_1 (id=?)",
+    "USE TEMP B-TREE FOR ORDER BY"
+   ]
+  },
+  "analytics: last 30 days @ 100000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 19.388,
+   "p95": 21.823,
+   "min": 18.293,
+   "max": 22.976,
+   "mean": 19.741,
+   "plan": [
+    "SCAN visits USING COVERING INDEX idx_visits_person",
+    "USE TEMP B-TREE FOR GROUP BY"
+   ]
+  },
+  "analytics: per person @ 100000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 80.126,
+   "p95": 105.61,
+   "min": 71.218,
+   "max": 105.669,
+   "mean": 86.144,
+   "plan": [
+    "SCAN p USING COVERING INDEX sqlite_autoindex_people_1",
+    "SEARCH v USING INDEX idx_visits_person (person_id=?) LEFT-JOIN"
+   ]
+  },
+  "people list (counts) @ 100000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 6.908,
+   "p95": 8.647,
+   "min": 5.976,
+   "max": 8.672,
+   "mean": 7.097,
+   "plan": [
+    "SCAN p",
+    "CORRELATED SCALAR SUBQUERY 1",
+    "SEARCH m USING COVERING INDEX idx_memories_person (person_id=?)",
+    "CORRELATED SCALAR SUBQUERY 2",
+    "SEARCH v USING COVERING INDEX idx_visits_person (person_id=?)",
+    "CORRELATED SCALAR SUBQUERY 3",
+    "SEARCH v USING COVERING INDEX idx_visits_person (person_id=?)"
+   ]
+  },
+  "recognised person details @ 100000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 0.003,
+   "p95": 0.004,
+   "min": 0.002,
+   "max": 0.004,
+   "mean": 0.003,
+   "plan": [
+    "SEARCH visits USING INDEX idx_visits_person (person_id=?)"
+   ]
+  },
+  "patient recent visits @ 100000 visits": {
+   "n": 30,
+   "unit": "ms",
+   "median": 24.488,
+   "p95": 28.496,
+   "min": 21.51,
+   "max": 30.614,
+   "mean": 24.778,
+   "plan": [
+    "SCAN v USING INDEX idx_visits_person",
+    "SEARCH p USING INDEX sqlite_autoindex_people_1 (id=?)",
+    "USE TEMP B-TREE FOR ORDER BY"
+   ]
+  }
+ }
+}

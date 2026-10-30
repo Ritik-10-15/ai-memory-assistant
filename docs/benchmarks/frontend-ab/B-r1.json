@@ -1,0 +1,257 @@
+{
+ "label": "B-r1",
+ "date": "2026-10-30T22:28:02.776Z",
+ "patient home, visitor present (per minute)": {
+  "main_thread_task_ms": 3196,
+  "script_ms": 877.4,
+  "layout_ms": 0.4,
+  "style_ms": 22.4,
+  "layouts": 1,
+  "style_recalcs": 305,
+  "requests": {
+   "/api/frame": 301,
+   "/api/current-person": 83
+  },
+  "js_heap_mb": 4.8,
+  "dom_nodes": 454,
+  "js_event_listeners": 198
+ },
+ "patient home, visitor absent (per minute)": {
+  "main_thread_task_ms": 2804.4,
+  "script_ms": 1002.2,
+  "layout_ms": 0.2,
+  "style_ms": 20.3,
+  "layouts": 1,
+  "style_recalcs": 308,
+  "requests": {
+   "/api/frame": 303,
+   "/api/current-person": 83
+  },
+  "js_heap_mb": 4.9,
+  "dom_nodes": 401,
+  "js_event_listeners": 194
+ },
+ "browser end-to-end (ms)": {
+  "appears_to_name_shown_median": 1005.9,
+  "appears_to_name_shown_max": 1029.3,
+  "leaves_to_name_removed_median": 2983.4,
+  "leaves_to_name_removed_max": 3028.5,
+  "runs": 8,
+  "appear": [
+   1023.8999999761581,
+   998.2999999523163,
+   1029.300000011921,
+   1005.8999999761581,
+   1014.1999999880791,
+   987.1000000238419,
+   987.5999999642372,
+   1021.6999999880791
+  ],
+  "leave": [
+   2759.100000023842,
+   3007.100000023842,
+   2974.399999976158,
+   3004.199999988079,
+   2998.399999976158,
+   2981.699999988079,
+   2983.400000035763,
+   3028.5
+  ]
+ },
+ "page loads — desktop (median of 3 cold loads)": {
+  "homepage": {
+   "lcp_ms": 192,
+   "cls": 0.103,
+   "fcp_ms": 192,
+   "dom_content_loaded_ms": 42.7,
+   "js_kb": 97.1,
+   "css_kb": 11.1,
+   "font_kb": 96.4,
+   "image_kb": 0,
+   "requests": 9,
+   "interaction_ms": 0
+  },
+  "patient home (visitor present)": {
+   "lcp_ms": 216,
+   "cls": 0.054,
+   "fcp_ms": 104,
+   "dom_content_loaded_ms": 61.8,
+   "js_kb": 79.1,
+   "css_kb": 10.4,
+   "font_kb": 96.4,
+   "image_kb": 145.4,
+   "requests": 29,
+   "interaction_ms": 24
+  },
+  "patient family": {
+   "lcp_ms": 88,
+   "cls": 0.906,
+   "fcp_ms": 88,
+   "dom_content_loaded_ms": 50.8,
+   "js_kb": 79.1,
+   "css_kb": 10.4,
+   "font_kb": 72.1,
+   "image_kb": 94.7,
+   "requests": 34,
+   "interaction_ms": null
+  },
+  "patient album (30 photos)": {
+   "lcp_ms": 204,
+   "cls": 0.115,
+   "fcp_ms": 92,
+   "dom_content_loaded_ms": 52.2,
+   "js_kb": 79.2,
+   "css_kb": 10.5,
+   "font_kb": 96.4,
+   "image_kb": 237.4,
+   "requests": 36,
+   "interaction_ms": 32
+  },
+  "patient memories": {
+   "lcp_ms": 420,
+   "cls": 0.67,
+   "fcp_ms": 120,
+   "dom_content_loaded_ms": 86.3,
+   "js_kb": 79.2,
+   "css_kb": 10.4,
+   "font_kb": 96.4,
+   "image_kb": 180.7,
+   "requests": 60,
+   "interaction_ms": null
+  },
+  "caregiver overview": {
+   "lcp_ms": 152,
+   "cls": 0.002,
+   "fcp_ms": 76,
+   "dom_content_loaded_ms": 44.1,
+   "js_kb": 106.7,
+   "css_kb": 10.5,
+   "font_kb": 102.7,
+   "image_kb": 90.9,
+   "requests": 18,
+   "interaction_ms": 16
+  },
+  "caregiver loved ones (31 people)": {
+   "lcp_ms": 144,
+   "cls": 0,
+   "fcp_ms": 64,
+   "dom_content_loaded_ms": 38.8,
+   "js_kb": 106.6,
+   "css_kb": 10.5,
+   "font_kb": 102.7,
+   "image_kb": 6.6,
+   "requests": 31,
+   "interaction_ms": null
+  },
+  "caregiver visit history": {
+   "lcp_ms": 176,
+   "cls": 0.012,
+   "fcp_ms": 68,
+   "dom_content_loaded_ms": 42.4,
+   "js_kb": 211.5,
+   "css_kb": 10.5,
+   "font_kb": 102.7,
+   "image_kb": 99.4,
+   "requests": 43,
+   "interaction_ms": null
+  }
+ },
+ "page loads — mobile (4x CPU slowdown) (median of 3 cold loads)": {
+  "homepage": {
+   "lcp_ms": 1708,
+   "cls": 0.083,
+   "fcp_ms": 1708,
+   "dom_content_loaded_ms": 149.8,
+   "js_kb": 97.1,
+   "css_kb": 11.1,
+   "font_kb": 96.4,
+   "image_kb": 0,
+   "requests": 9,
+   "interaction_ms": 80
+  },
+  "patient home (visitor present)": {
+   "lcp_ms": 688,
+   "cls": 0,
+   "fcp_ms": 264,
+   "dom_content_loaded_ms": 111.2,
+   "js_kb": 79.1,
+   "css_kb": 10.5,
+   "font_kb": 96.4,
+   "image_kb": 145.4,
+   "requests": 27,
+   "interaction_ms": 56
+  },
+  "patient family": {
+   "lcp_ms": 176,
+   "cls": 0,
+   "fcp_ms": 176,
+   "dom_content_loaded_ms": 97.4,
+   "js_kb": 79.1,
+   "css_kb": 10.5,
+   "font_kb": 72.1,
+   "image_kb": 94,
+   "requests": 29,
+   "interaction_ms": null
+  },
+  "patient album (30 photos)": {
+   "lcp_ms": 632,
+   "cls": 0,
+   "fcp_ms": 232,
+   "dom_content_loaded_ms": 103,
+   "js_kb": 79.1,
+   "css_kb": 10.4,
+   "font_kb": 96.4,
+   "image_kb": 121.2,
+   "requests": 23,
+   "interaction_ms": 112
+  },
+  "patient memories": {
+   "lcp_ms": 544,
+   "cls": 0,
+   "fcp_ms": 544,
+   "dom_content_loaded_ms": 302.6,
+   "js_kb": 79.1,
+   "css_kb": 10.5,
+   "font_kb": 96.4,
+   "image_kb": 105.6,
+   "requests": 41,
+   "interaction_ms": null
+  },
+  "caregiver overview": {
+   "lcp_ms": 612,
+   "cls": 0,
+   "fcp_ms": 292,
+   "dom_content_loaded_ms": 93.8,
+   "js_kb": 106.6,
+   "css_kb": 10.5,
+   "font_kb": 102.7,
+   "image_kb": 90.6,
+   "requests": 17,
+   "interaction_ms": 48
+  },
+  "caregiver loved ones (31 people)": {
+   "lcp_ms": 484,
+   "cls": 0,
+   "fcp_ms": 260,
+   "dom_content_loaded_ms": 115.5,
+   "js_kb": 106.5,
+   "css_kb": 10.4,
+   "font_kb": 102.7,
+   "image_kb": 1.9,
+   "requests": 16,
+   "interaction_ms": null
+  },
+  "caregiver visit history": {
+   "lcp_ms": 1140,
+   "cls": 0,
+   "fcp_ms": 312,
+   "dom_content_loaded_ms": 128.6,
+   "js_kb": 211.5,
+   "css_kb": 10.5,
+   "font_kb": 102.7,
+   "image_kb": 99.4,
+   "requests": 43,
+   "interaction_ms": null
+  }
+ }
+}

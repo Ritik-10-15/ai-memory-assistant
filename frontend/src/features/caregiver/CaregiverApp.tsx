@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, UNAUTHORIZED_EVENT } from "@/api/client";
 import { Spinner } from "@/components/ui";
@@ -13,7 +13,10 @@ import { AlbumEditorPage } from "./pages/AlbumEditorPage";
 import { AlbumsPage } from "./pages/AlbumsPage";
 import { PhotosPage } from "./pages/PhotosPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { VisitsPage } from "./pages/VisitsPage";
+
+// Only Visit history draws charts; the chart library (about half of the
+// caregiver bundle) is fetched when that page is first opened.
+const VisitsPage = lazy(() => import("./pages/VisitsPage").then((m) => ({ default: m.VisitsPage })));
 
 /** Fresh editor state per person: "add" → "edit" must not reuse the old instance. */
 function PersonEditorRoute() {
@@ -62,7 +65,14 @@ export default function CaregiverApp() {
         <Route path="albums/:id" element={<AlbumEditorPage />} />
         <Route path="photos" element={<PhotosPage />} />
         <Route path="memories" element={<MemoriesPage />} />
-        <Route path="visits" element={<VisitsPage />} />
+        <Route
+          path="visits"
+          element={
+            <Suspense fallback={<Spinner label="Loading visit history" />}>
+              <VisitsPage />
+            </Suspense>
+          }
+        />
         <Route path="analytics" element={<Navigate to="/caregiver/visits" replace />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/caregiver" replace />} />

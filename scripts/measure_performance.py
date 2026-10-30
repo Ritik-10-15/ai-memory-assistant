@@ -94,20 +94,16 @@ def main(face_path):
     for people in (1, 50, 500):
         rng = np.random.default_rng(0)
         gallery = {str(uuid.uuid4()): [rng.normal(size=feat.shape).astype(np.float32) for _ in range(10)] for _ in range(people)}
-        with vision._gallery_lock:
-            vision._gallery.clear()
-            vision._gallery.update(gallery)
-            vision._name_map.clear()
-            vision._name_map.update({p: "x" for p in gallery})
+        with vision._gallery_lock:           # replaced, as load_known_faces() does
+            vision._gallery = gallery
+            vision._name_map = {p: "x" for p in gallery}
         report(f"recognize() incl. embedding, gallery {people} people x 10", timed(lambda: vision.recognize(face, row), 40))
 
     # Frame freshness: a producer at ~30 fps (server webcam) through the real
     # queue and worker thread; how old is each frame when it is recognised?
     with vision._gallery_lock:
-        vision._gallery.clear()
-        vision._gallery.update({"me": [feat]})
-        vision._name_map.clear()
-        vision._name_map.update({"me": "Me"})
+        vision._gallery = {"me": [feat]}
+        vision._name_map = {"me": "Me"}
     import camera
     ages = []
     real_get = worker.frame_q.get

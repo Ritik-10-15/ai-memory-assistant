@@ -23,7 +23,8 @@ from auth import (caregiver_required, patient_required, secret_matches,
                   start_caregiver_session, end_caregiver_session,
                   retry_after, record_failure, clear_failures)
 from database import get_db
-from services import auto_log, WHISPER
+import services
+from services import auto_log
 from vision import load_known_faces
 from worker import detection, det_lock
 from camera import generate_frames, capture_enroll_frame, process_frame, decode_jpeg
@@ -181,7 +182,7 @@ def api_recent_visits():
 @app.route("/api/upload-audio", methods=["POST"])
 @patient_required
 def api_upload_audio():
-    if not WHISPER:
+    if not services.WHISPER:      # read now: it turns False if Whisper fails to load
         return jsonify({"error": "Whisper not available"}), 503
     pid = request.form.get("person_id")
     audio = request.files.get("audio")

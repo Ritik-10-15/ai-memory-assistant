@@ -14,9 +14,27 @@ import numpy as np
 
 import config
 from database import get_db
-from vision import recognize, visit_tracker, _name_map
+from vision import display_name, recognize, visit_tracker
 
-frame_q      = queue.Queue(maxsize=config.FRAME_QUEUE_SIZE)
+
+class LatestFrames(queue.Queue):
+    """Frame buffer for the recognition worker. When the worker falls behind
+    and the buffer is full, the OLDEST waiting frame is dropped to make room
+    (a plain Queue would refuse the newest instead), so the worker always
+    moves on to what the camera sees now rather than a moment ago."""
+
+    def put_nowait(self, item):
+        with self.not_full:
+            dropped = 0 < self.maxsize <= self._qsize()
+            if dropped:
+                self._get()
+            self._put(item)
+            if not dropped:
+                self.unfinished_tasks += 1
+            self.not_empty.notify()
+
+
+frame_q      = LatestFrames(maxsize=config.FRAME_QUEUE_SIZE)
 _score_buffer = deque(maxlen=config.SMOOTH_WINDOW)
 
 detection = {
@@ -101,13 +119,13 @@ def _step(pid, score, name, face_present):
         _unknown_streak += 1
         if _unknown_streak < config.UNKNOWN_GRACE_FRAMES and _sticky_count > 0:
             _sticky_count -= 1
-            pid, name, state = _sticky_pid, _name_map.get(_sticky_pid), "high"
+            pid, name, state = _sticky_pid, display_name(_sticky_pid), "high"
         else:
             _sticky_pid, _sticky_count = None, 0
     elif not face_present and _sticky_pid:
         if _sticky_count > 0:
             _sticky_count -= 1
-            pid, name, state = _sticky_pid, _name_map.get(_sticky_pid), "high"
+            pid, name, state = _sticky_pid, display_name(_sticky_pid), "high"
         else:
             _sticky_pid = None
     else:

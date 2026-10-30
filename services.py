@@ -4,17 +4,36 @@ LLM summarization. Each is wrapped in try/except so a missing library or
 model never takes down the rest of the app — see the README section on
 graceful degradation of optional dependencies.
 """
+import importlib.util
 import os
+import threading
+
 from database import get_db
 
-try:
-    import whisper
-    WHISPER = True
-    _whisper_model = whisper.load_model("base")
-    print("✅ Whisper loaded")
-except Exception:
-    WHISPER = False
-    _whisper_model = None
+# Whisper takes seconds and several hundred MB to load, so it loads on a
+# background thread instead of delaying startup. WHISPER says whether voice
+# memos are available; it turns False if loading fails.
+WHISPER = importlib.util.find_spec("whisper") is not None
+_whisper_model = None
+_whisper_ready = threading.Event()
+
+
+def _load_whisper():
+    global WHISPER, _whisper_model
+    try:
+        import whisper
+        _whisper_model = whisper.load_model("base")
+        print("✅ Whisper loaded")
+    except Exception:
+        WHISPER = False
+    finally:
+        _whisper_ready.set()
+
+
+if WHISPER:
+    threading.Thread(target=_load_whisper, daemon=True).start()
+else:
+    _whisper_ready.set()
 
 try:
     import openai
@@ -36,7 +55,8 @@ def auto_log(pid, audio_path):
     """Transcribe a recorded voice memo and save it as a memory. Optionally
     summarized by an LLM if OPENAI_API_KEY is set; otherwise the raw
     transcript is stored as-is."""
-    if not WHISPER:
+    _whisper_ready.wait()          # a memo recorded right after startup waits for the model
+    if not WHISPER or _whisper_model is None:
         return
     try:
         res = _whisper_model.transcribe(audio_path)

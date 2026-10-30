@@ -1,0 +1,22 @@
+{
+ "welcome-desktop": {
+  "perf": 98,
+  "a11y": 100,
+  "lcp": 475.306,
+  "fcp": 427.306,
+  "tbt": 6,
+  "cls": 0.091,
+  "bytes": 245495,
+  "runs": 1
+ },
+ "welcome-mobile": {
+  "perf": 96,
+  "a11y": 100,
+  "lcp": 2066,
+  "fcp": 1980,
+  "tbt": 0,
+  "cls": 0.076,
+  "bytes": 245481,
+  "runs": 3
+ }
+}
