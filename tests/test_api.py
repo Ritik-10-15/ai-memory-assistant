@@ -136,3 +136,12 @@ def test_caregiver_session_also_opens_patient_screen(client, monkeypatch):
     monkeypatch.setattr(config, "PATIENT_PIN", "2468")
     client.post("/caregiver/login", data={"password": config.CAREGIVER_PASS})
     assert client.get("/api/stats").status_code == 200
+
+
+def test_public_homepage_needs_no_sign_in(client, monkeypatch):
+    monkeypatch.setattr(config, "PATIENT_PIN", "2468")
+    resp = client.get("/welcome", follow_redirects=False)
+    assert resp.status_code == 200
+    assert b'id="root"' in resp.data
+    # The patient app itself is still gated.
+    assert client.get("/", follow_redirects=False).status_code in (301, 302)
