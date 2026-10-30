@@ -39,7 +39,16 @@ wait_ready() {
   return 1
 }
 
-PREV=$(git rev-parse --short HEAD)
+running_version() {   # what is actually serving now, whatever git's checkout says
+  compose exec -T app python -c "
+import json, urllib.request
+print(json.load(urllib.request.urlopen('http://localhost:8000/readyz', timeout=5))['version'])" 2>/dev/null
+}
+
+PREV=$(running_version || true)
+if [ -z "$PREV" ] || [ "$PREV" = "dev" ] || ! git cat-file -e "$PREV^{commit}" 2>/dev/null; then
+  PREV=$(git rev-parse --short HEAD)    # nothing running, or an image from before version tags
+fi
 git fetch -q origin
 git checkout -q --detach "$REF"
 NEW=$(git rev-parse --short HEAD)
