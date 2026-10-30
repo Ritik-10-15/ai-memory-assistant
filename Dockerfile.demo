@@ -1,0 +1,19 @@
+# Public portfolio demo: the homepage and simulated demo as static files.
+# No Python, no models, no database, no patient code (see frontend/vite.demo.config.ts).
+#   docker build -f Dockerfile.demo -t memory-assistant-demo .
+#   docker run --rm -p 8080:8080 memory-assistant-demo
+FROM node:20-alpine AS build
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build:demo
+
+FROM caddy:2.11.6-alpine
+COPY demo/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /frontend/dist-demo /srv
+# Runs without root: port 8080 needs no privileges.
+USER 1000:1000
+ENV XDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1

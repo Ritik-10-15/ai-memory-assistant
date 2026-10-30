@@ -196,24 +196,38 @@ export function Portrait({ figure, title }: { figure: Figure; title: string }) {
   );
 }
 
-/** A remembered day: the patient with a loved one, in the garden or the kitchen. */
+export type SceneKind = "garden" | "kitchen" | "seaside" | "birthday";
+
+const SCENE_SKY: Record<SceneKind, [string, string]> = {
+  garden: ["#F9E3C9", "#F4EFE2"],
+  kitchen: ["#F6EBDD", "#EFDCC6"],
+  seaside: ["#CFE6EE", "#F4EFE2"],
+  birthday: ["#F6E6EE", "#F4EFE2"],
+};
+
+/** A remembered day: the patient with a loved one. Illustrations only — never photographs. */
 export function MemoryScene({
   title,
   scene = "garden",
   companion = "daniel",
 }: {
-  title: string;
-  scene?: "garden" | "kitchen";
+  /** Omit for a decorative copy (hidden from assistive technology). */
+  title?: string;
+  scene?: SceneKind;
   companion?: "daniel" | "ruth";
 }) {
   const id = useId();
   return (
-    <svg viewBox="0 0 480 300" role="img" aria-labelledby={`${id}-t`} className="block h-full w-full">
-      <title id={`${id}-t`}>{title}</title>
+    <svg
+      viewBox="0 0 480 300"
+      {...(title ? { role: "img", "aria-labelledby": `${id}-t` } : { "aria-hidden": true })}
+      className="block h-full w-full"
+    >
+      {title && <title id={`${id}-t`}>{title}</title>}
       <defs>
         <linearGradient id={`${id}-bg`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor={scene === "garden" ? "#F9E3C9" : "#F6EBDD"} />
-          <stop offset="1" stopColor={scene === "garden" ? "#F4EFE2" : "#EFDCC6"} />
+          <stop offset="0" stopColor={SCENE_SKY[scene][0]} />
+          <stop offset="1" stopColor={SCENE_SKY[scene][1]} />
         </linearGradient>
       </defs>
       <rect width="480" height="300" fill={`url(#${id}-bg)`} />
@@ -228,6 +242,26 @@ export function MemoryScene({
               <circle cx={cx} cy={250 - (i % 2) * 14} r="3.5" fill="#F9E3C9" />
             </g>
           ))}
+        </>
+      ) : scene === "seaside" ? (
+        <>
+          {/* sun, sea, sand and a striped windbreak */}
+          <circle cx="96" cy="66" r="30" fill="#F2C14E" opacity="0.9" />
+          <path d="M0 150 H480 V205 H0 Z" fill="#5B9BB0" />
+          <path d="M0 168 Q60 160 120 168 T240 168 T360 168 T480 168" stroke="#CFE6EE" strokeWidth="3" fill="none" />
+          <path d="M0 205 Q160 190 300 204 T480 198 V300 H0 Z" fill="#EBD3A8" />
+          {[380, 404, 428].map((x, i) => (
+            <rect key={x} x={x} y="196" width="24" height="56" fill={i % 2 ? "#FFFCF6" : "#E07A6A"} />
+          ))}
+        </>
+      ) : scene === "birthday" ? (
+        <>
+          {/* bunting, a window and a cake on the table */}
+          <path d="M20 34 Q240 84 460 34" stroke="#B98A5E" strokeWidth="2" fill="none" />
+          {[60, 120, 180, 240, 300, 360, 420].map((x, i) => (
+            <path key={x} d={`M${x - 14} ${44 + Math.sin((x / 480) * Math.PI) * 30} l14 26 l14 -26 Z`} fill={["#E07A6A", "#F2C14E", "#9CC5A1"][i % 3]} />
+          ))}
+          <rect x="360" y="96" width="80" height="70" rx="6" fill="#FFFCF6" opacity="0.7" />
         </>
       ) : (
         <>
@@ -245,6 +279,19 @@ export function MemoryScene({
       )}
       <Person figure="nana" x={170} y={170} scale={0.92} />
       <Person figure={companion} x={300} y={164} scale={0.92} />
+      {scene === "birthday" && (
+        <>
+          <rect x="60" y="248" width="360" height="52" rx="6" fill="#C9A27E" />
+          <rect x="204" y="214" width="72" height="34" rx="6" fill="#F6E6EE" />
+          <rect x="204" y="226" width="72" height="6" fill="#E07A6A" />
+          {[222, 240, 258].map((x) => (
+            <g key={x}>
+              <rect x={x - 2} y="198" width="4" height="16" fill="#9CC5A1" />
+              <ellipse cx={x} cy="194" rx="3" ry="5" fill="#F2C14E" />
+            </g>
+          ))}
+        </>
+      )}
       {scene === "kitchen" && (
         <>
           <rect x="60" y="248" width="360" height="52" rx="6" fill="#C9A27E" />
