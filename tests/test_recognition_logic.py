@@ -53,3 +53,57 @@ def test_recognize_rejects_when_gallery_empty(monkeypatch):
     pid, score, name = vision.recognize(bgr=None, face_row=None)
     assert pid is None
     assert name is None
+
+# ── Phase 8: the whole gallery is scored in one matrix product ───────
+def _use_gallery(monkeypatch, gallery):
+    """Install a gallery the way load_known_faces() does: by replacing it."""
+    monkeypatch.setattr(vision, "_gallery", gallery)
+    monkeypatch.setattr(vision, "_name_map", {pid: pid.upper() for pid in gallery})
+
+
+def _frame_embedding(monkeypatch, query):
+    monkeypatch.setattr(vision, "embed_face", lambda bgr, row: query)
+
+
+def test_recognize_agrees_with_comparing_every_embedding_one_by_one(monkeypatch):
+    """Same person, same score (and the same open-set rejection) as the
+    per-embedding cosine loop the matcher replaced."""
+    monkeypatch.setattr(vision, "_recognizer", _FakeRecognizer())
+    rng = np.random.default_rng(3)
+    gallery = {f"p{i}": [rng.normal(size=(1, 128)).astype(np.float32) for _ in range(5)] for i in range(40)}
+    _use_gallery(monkeypatch, gallery)
+    accepted = rejected = 0
+    for trial in range(40):
+        if trial % 4 == 3:                      # a stranger
+            query = rng.normal(size=(1, 128)).astype(np.float32)
+        else:                                   # a noisy view of someone enrolled
+            target = gallery[f"p{trial}"][trial % 5]
+            query = (target + rng.normal(scale=0.3 + trial * 0.08, size=target.shape)).astype(np.float32)
+        _frame_embedding(monkeypatch, query)
+        best_pid, best = None, -1.0
+        for pid, feats in gallery.items():
+            s = vision.cosine_match(query, feats)
+            if s > best:
+                best_pid, best = pid, s
+        pid, score, name = vision.recognize(bgr=None, face_row=None)
+        assert score == _approx(best, 1e-5)
+        if best >= vision.config.SCORE_MEDIUM:
+            assert (pid, name) == (best_pid, best_pid.upper())
+            accepted += 1
+        else:
+            assert (pid, name) == (None, None)
+            rejected += 1
+    assert accepted and rejected                # both sides of the threshold were exercised
+
+
+def test_a_reloaded_gallery_is_used_for_the_next_frame(monkeypatch):
+    first = np.ones((1, 128), np.float32)
+    second = -first
+    _use_gallery(monkeypatch, {"before": [first]})
+    _frame_embedding(monkeypatch, second)
+    assert vision.recognize(bgr=None, face_row=None)[0] is None
+    _use_gallery(monkeypatch, {"after": [second]})        # a person enrolled / gallery reloaded
+    assert vision.recognize(bgr=None, face_row=None)[0] == "after"
+    _use_gallery(monkeypatch, {})                         # everyone deleted
+    assert vision.recognize(bgr=None, face_row=None) == (None, 0.0, None)
+

@@ -133,14 +133,11 @@ def environment(cores):
 
 # ── synthetic data (scripts/bench_data.py) ──────────────────────────────
 def install_gallery(gallery):
+    """Replace the gallery the way load_known_faces() does."""
     import vision
     with vision._gallery_lock:
-        vision._gallery.clear()
-        vision._gallery.update(gallery)
-        vision._name_map.clear()
-        vision._name_map.update({p: "Visitor" if p == "visitor" else "Synthetic" for p in gallery})
-    if hasattr(vision, "_rebuild_matrix"):
-        vision._rebuild_matrix()
+        vision._gallery = dict(gallery)
+        vision._name_map = {p: "Visitor" if p == "visitor" else "Synthetic" for p in gallery}
 
 
 # ── sections ──────────────────────────────────────────────────────────
@@ -228,7 +225,10 @@ def _instrument_queue(q):
 
     def put_nowait(item):
         PIPE["offered"] += 1
-        return real_put((item[0], item[1], time.perf_counter()))
+        try:
+            return real_put((item[0], item[1], time.perf_counter()))
+        except queue.Full:            # a plain Queue refuses the newest frame; the producer ignored that
+            return None
 
     def get(*a, **k):
         t0 = time.perf_counter()
@@ -389,6 +389,35 @@ def section_pipeline(face):
             sys.stdout = real_stdout
         put(f"pipeline:{name}", "log output (bytes)", sink.bytes - bytes0)
         put(f"pipeline:{name}", "log output (lines)", sink.lines - lines0)
+
+    # Slow device: recognition made 60 ms slower, so the worker cannot keep up
+    # with a 30 fps producer. The frame buffer the app used before Phase 8
+    # and the current one run under identical conditions in the same process.
+    real_recognize = worker.recognize
+
+    def slow_recognize(bgr, row):
+        time.sleep(0.060)
+        return real_recognize(bgr, row)
+
+    buffers = [("FIFO queue of 2 (before Phase 8)", lambda: queue.Queue(maxsize=2))]
+    if hasattr(worker, "LatestFrames"):
+        buffers.append(("newest frame only (Phase 8)", lambda: worker.LatestFrames(maxsize=1)))
+    worker.recognize = slow_recognize
+    try:
+        for label, make in buffers:
+            name = f"slow device 30fps (+60 ms per recognition), {label}"
+            print(f" scenario: {name}")
+            q = make()
+            _instrument_queue(q)
+            worker.frame_q = camera.frame_q = q
+            time.sleep(1.2)                                    # worker leaves its wait on the old buffer
+            real_stdout, sys.stdout = sys.stdout, sink
+            try:
+                _run_pipeline(name, face, blank, gallery_of(30, 10, rng, visitor), paced(30))
+            finally:
+                sys.stdout = real_stdout
+    finally:
+        worker.recognize = real_recognize
 
 
 def section_api(face):

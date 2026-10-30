@@ -77,6 +77,24 @@ def cosine_match(feat, gallery_feats):
 _gallery      = {}   # pid -> [np.ndarray, ...]
 _name_map     = {}   # pid -> display name
 _gallery_lock = threading.Lock()
+_match_cache  = (None, None, [])   # (gallery it was built from, unit-row matrix, pid per row)
+
+
+def _match_matrix(gallery):
+    """Every embedding in `gallery` as one L2-normalised row, plus the pid of
+    each row, so a frame is scored against the whole gallery in one matrix
+    product (the same cosine similarity as cosine_match). Rebuilt only when
+    the gallery dict is replaced, which load_known_faces() does on every
+    reload. Call with _gallery_lock held."""
+    global _match_cache
+    built_from, matrix, owners = _match_cache
+    if built_from is not gallery:
+        owners = [pid for pid, feats in gallery.items() for _ in feats]
+        rows = [np.asarray(f, dtype=np.float32).reshape(-1) for feats in gallery.values() for f in feats]
+        matrix = np.vstack(rows) if rows else np.zeros((0, 128), np.float32)
+        matrix /= np.maximum(np.linalg.norm(matrix, axis=1, keepdims=True), 1e-12)
+        _match_cache = (gallery, matrix, owners)
+    return matrix, owners
 
 
 def _embed_photo_file(path):
@@ -205,20 +223,19 @@ def recognize(bgr, face_row):
     clears SCORE_MEDIUM. This is the open-set rejection boundary — an
     empty or unmatched gallery must never guess."""
     with _gallery_lock:
-        gallery = {pid: list(feats) for pid, feats in _gallery.items()}
-        names = dict(_name_map)
-    if not gallery:
+        matrix, owners = _match_matrix(_gallery)
+        names = _name_map
+    if not owners:
         return None, 0.0, None
     try:
         feat = embed_face(bgr, face_row)
     except Exception as e:
         print(f"[RECOG ERROR] {e}")
         return None, 0.0, None
-    best_pid, best_score = None, -1.0
-    for pid, feats in gallery.items():
-        s = cosine_match(feat, feats)
-        if s > best_score:
-            best_pid, best_score = pid, s
+    query = np.asarray(feat, dtype=np.float32).reshape(-1)
+    scores = matrix @ (query / max(float(np.linalg.norm(query)), 1e-12))
+    best = int(np.argmax(scores))            # first best row, like the old per-person loop
+    best_pid, best_score = owners[best], float(scores[best])
     print(f"[RECOG] best={names.get(best_pid, '?')} score={best_score:.3f}")
     if best_score >= config.SCORE_MEDIUM:
         return best_pid, best_score, names.get(best_pid)
