@@ -107,3 +107,13 @@ def test_a_reloaded_gallery_is_used_for_the_next_frame(monkeypatch):
     _use_gallery(monkeypatch, {})                         # everyone deleted
     assert vision.recognize(bgr=None, face_row=None) == (None, 0.0, None)
 
+
+def test_recognising_a_frame_writes_nothing_to_the_log(monkeypatch, capsys):
+    """Phase 8: one log line per frame grew the container log without limit
+    and recorded who was recognised. Only errors are logged now."""
+    feat = np.ones((1, 128), np.float32)
+    _use_gallery(monkeypatch, {"sarah": [feat]})
+    _frame_embedding(monkeypatch, feat)
+    for _ in range(10):
+        assert vision.recognize(bgr=None, face_row=None)[0] == "sarah"
+    assert capsys.readouterr().out == ""

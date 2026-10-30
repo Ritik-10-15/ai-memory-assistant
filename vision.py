@@ -236,7 +236,6 @@ def recognize(bgr, face_row):
     scores = matrix @ (query / max(float(np.linalg.norm(query)), 1e-12))
     best = int(np.argmax(scores))            # first best row, like the old per-person loop
     best_pid, best_score = owners[best], float(scores[best])
-    print(f"[RECOG] best={names.get(best_pid, '?')} score={best_score:.3f}")
     if best_score >= config.SCORE_MEDIUM:
         return best_pid, best_score, names.get(best_pid)
     return None, best_score, None
