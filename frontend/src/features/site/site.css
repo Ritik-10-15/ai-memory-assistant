@@ -1,0 +1,53 @@
+/* Public homepage only — loaded with the code-split /welcome page, so the
+   patient app and caregiver workspace never download these fonts. */
+@import "@fontsource/dm-serif-display/400.css";
+@import "@fontsource/dm-serif-display/400-italic.css";
+@import "@fontsource-variable/inter";
+
+.site-root {
+  font-family: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Anchored sections clear the sticky navigation. */
+.site-root [id] {
+  scroll-margin-top: 6rem;
+}
+
+.site-root :focus-visible {
+  outline: 3px solid #a04ca0;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.site-root) {
+    scroll-behavior: smooth;
+  }
+
+  /* Gentle entrance: sections rise slightly as they come into view. */
+  .site-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity 600ms ease-out,
+      transform 600ms ease-out;
+  }
+  .site-reveal[data-visible="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .site-swap {
+    animation: site-swap 360ms ease-out;
+  }
+  @keyframes site-swap {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

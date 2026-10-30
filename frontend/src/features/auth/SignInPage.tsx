@@ -122,9 +122,14 @@ export function PatientSignIn() {
           Continue
         </Button>
       </form>
-      <Link to="/caregiver/login" className="mt-6 inline-block text-sm font-medium text-primary-700 underline-offset-4 hover:underline">
-        Caregiver sign-in
-      </Link>
+      <div className="mt-6 flex flex-wrap justify-between gap-3 text-sm font-medium">
+        <Link to="/caregiver/login" className="text-primary-700 underline-offset-4 hover:underline">
+          Caregiver sign-in
+        </Link>
+        <Link to="/welcome" className="text-primary-700 underline-offset-4 hover:underline">
+          What is Memory Assistant?
+        </Link>
+      </div>
     </Shell>
   );
 }

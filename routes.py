@@ -59,6 +59,13 @@ def healthz():
     return "ok"
 
 
+@app.route("/welcome")
+def welcome():
+    """Public homepage. Shows only fictional, simulated demo content — no
+    patient data — so it needs no sign-in."""
+    return spa()
+
+
 # ── PATIENT ROUTES ────────────────────────────────────────────────────
 @app.route("/patient/login", methods=["GET", "POST"])
 def patient_login():

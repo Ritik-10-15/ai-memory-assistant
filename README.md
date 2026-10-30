@@ -47,6 +47,19 @@ right or wrong answers.
 
 ---
 
+### Public homepage
+
+`/welcome` is a public product page: how it works, what is built today versus
+on the roadmap, and an **interactive simulated demo** (familiar visitor,
+possible match, someone new, nobody there) showing how the interface avoids
+guessing a name. The demo uses fictional people and original illustrations,
+runs entirely in the browser, never opens the camera and never calls the
+backend. It has its own design tokens (mint, forest, plum, cream; DM Serif
+Display and Inter) and is code-split, so the patient app doesn't load it.
+The patient PIN screen links to it ("What is Memory Assistant?").
+
+---
+
 ## Why this project is interesting (the engineering story)
 
 The recognition engine went through a deliberate migration that's the core of
@@ -132,6 +145,7 @@ python app.py
 
 Then open:
 
+- Public homepage: <http://127.0.0.1:5000/welcome>
 - Patient screen: <http://127.0.0.1:5000/>
 - Caregiver panel: <http://127.0.0.1:5000/caregiver>
 
