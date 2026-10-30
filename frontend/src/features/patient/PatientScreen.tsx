@@ -303,7 +303,7 @@ export function PatientScreen() {
             mode={cameraMode}
             videoRef={videoRef}
             browserStatus={camera.status}
-            frame={camera.frame}
+            frames={camera.frames}
             view={view}
             serverFeedActive={visible}
             onServerFeedError={() => setServerFeedFailed(true)}
