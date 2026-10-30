@@ -3,7 +3,6 @@ camera.py — webcam access and the MJPEG frame generator for /video.
 
 This is the "producer" side of the producer-consumer queue with worker.py.
 """
-import queue
 import threading
 import time
 
@@ -50,10 +49,7 @@ def process_frame(frame):
     global _no_face
     faces = detect_faces(frame)   # YuNet, once per frame
     best_row = max(faces, key=lambda f: f[2] * f[3]) if len(faces) > 0 else None
-    try:
-        frame_q.put_nowait((frame.copy(), best_row))
-    except queue.Full:
-        pass
+    frame_q.put_nowait((frame.copy(), best_row))   # replaces a frame still waiting
 
     if best_row is None:
         _no_face += 1
