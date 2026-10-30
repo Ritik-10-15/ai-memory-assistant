@@ -4,11 +4,18 @@ app_instance.py — creates the Flask app object only.
 Kept separate from app.py so routes.py can `from app_instance import app`
 without circularly importing app.py itself.
 """
+import logging
+import os
 from datetime import timedelta
 
 from flask import Flask, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 import config
+
+# One log format for every module (gunicorn's access log is separate).
+# Status messages only: no names, embeddings, transcripts or secrets.
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 # static_folder=None: the React build is served explicitly by routes.py.
 app = Flask(__name__, static_folder=None)

@@ -10,6 +10,7 @@ Pages (GET) are served by the React app in frontend/dist; the form-POST
 endpoints below are kept so existing scripts and bookmarks keep working.
 The JSON API the React caregiver dashboard uses lives in api.py.
 """
+import os
 import shutil
 import uuid
 from pathlib import Path
@@ -58,7 +59,40 @@ def favicon():
 
 @app.route("/healthz")
 def healthz():
+    """Liveness: the process is up and serving requests. Nothing else."""
     return "ok"
+
+
+@app.route("/readyz")
+def readyz():
+    """Readiness, for deploy verification and monitoring: can this instance
+    do its job? Public, so it reports states only: no paths, counts, names
+    or settings. 503 when a required part is down; optional features being
+    off is not a failure."""
+    import migrations
+    import vision
+    import worker as recognition_worker
+    try:
+        with get_db() as c:
+            c.execute("SELECT 1").fetchone()
+        db = "ok" if migrations.current_version() == migrations.LATEST else "needs migration"
+    except Exception:
+        db = "unavailable"
+    recognition = "ok" if vision.models_loaded() and recognition_worker.is_running() else "unavailable"
+    if config.CAMERA_MODE == "browser":
+        camera = "patient device"
+    else:
+        from camera import _camera
+        camera = "ok" if _camera is not None and _camera.isOpened() else "not available"
+    ready = db == "ok" and recognition == "ok"
+    return jsonify({
+        "status": "ready" if ready else "not ready",
+        "version": config.APP_VERSION,
+        "checks": {"database": db, "recognition": recognition},
+        "camera": camera,
+        "optional": {"voice_memos": bool(services.WHISPER),
+                     "llm_summaries": bool(services.OPENAI and os.environ.get("OPENAI_API_KEY"))},
+    }), 200 if ready else 503
 
 
 @app.route("/welcome")

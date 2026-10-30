@@ -55,3 +55,6 @@ UNKNOWN_GRACE_FRAMES  = 4   # non-matching frames tolerated before dropping a na
 FRAME_STALE_S         = 3.0 # no frames for this long (camera off, tab hidden): forget the identity
 
 CAM_W, CAM_H = 640, 480
+
+# Build identifier shown by /readyz (the Docker image sets the git commit).
+APP_VERSION = os.environ.get("APP_VERSION", "dev")
