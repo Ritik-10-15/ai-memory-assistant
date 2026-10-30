@@ -14,6 +14,7 @@ from worker import start_worker
 import routes  # noqa: F401  (import registers every route on `app`)
 import api        # noqa: F401  (JSON API for the React frontend)
 import album_api  # noqa: F401  (family photos + patient reminiscence)
+import albums_api  # noqa: F401  (named photo albums)
 
 
 def startup():

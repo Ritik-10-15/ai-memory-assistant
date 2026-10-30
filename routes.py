@@ -306,10 +306,14 @@ def delete_person(pid):
     with get_db() as c:
         p = c.execute("SELECT name FROM people WHERE id=?", (pid,)).fetchone()
         if p:
-            c.execute("DELETE FROM people WHERE id=?", (pid,))
-            c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
-            c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+            # Children first: foreign keys are enforced. Photos stay, but no longer
+            # illustrate this person's (deleted) memories.
+            c.execute("UPDATE photos SET memory_id=NULL WHERE memory_id IN "
+                      "(SELECT id FROM memories WHERE person_id=?)", (pid,))
             c.execute("DELETE FROM photo_people WHERE person_id=?", (pid,))
+            c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+            c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
+            c.execute("DELETE FROM people WHERE id=?", (pid,))
     # Only remove a folder that belongs to a real person: an arbitrary id
     # such as ".." would otherwise point outside known_faces/.
     d = config.KNOWN_FACES_DIR / pid
@@ -343,6 +347,7 @@ def delete_memory(mem_id):
         if row:
             if not pid:
                 pid = row["person_id"]
+            c.execute("UPDATE photos SET memory_id=NULL WHERE memory_id=?", (mem_id,))
             c.execute("DELETE FROM memories WHERE id=?", (mem_id,))
             flash("✅ Memory deleted")
         else:
