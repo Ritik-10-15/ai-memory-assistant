@@ -1,5 +1,9 @@
 @import "@fontsource-variable/nunito-sans";
 @import "@fontsource-variable/fraunces";
+/* Companion theme (patient app + homepage). Font files download only when used. */
+@import "@fontsource/dm-serif-display/400.css";
+@import "@fontsource/dm-serif-display/400-italic.css";
+@import "@fontsource-variable/inter";
 
 @tailwind base;
 @tailwind components;
@@ -24,6 +28,13 @@
   :focus-visible {
     @apply outline outline-[3px] outline-offset-2 outline-primary-600;
   }
+}
+
+/* DM Serif Display has a single weight: never fake-bold it. */
+.theme-companion :is(h1, h2):not(.font-sans),
+.theme-companion .font-serif {
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 @layer components {

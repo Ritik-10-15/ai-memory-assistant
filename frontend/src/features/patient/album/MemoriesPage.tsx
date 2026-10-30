@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { usePageTitle } from "../usePageTitle";
 import type { Speech } from "../useSpeech";
 import { LookTogether } from "./LookTogether";
-import { PatientMessage } from "./PatientMessage";
+import { PatientEmptyState } from "./PatientEmptyState";
 import { AlbumCard, buildAlbum, itemPeople } from "./pieces";
 
 /** The memory album: conversation memories and family photos to enjoy. */
@@ -60,7 +60,7 @@ export function MemoriesPage({ speech }: { speech: Speech }) {
       <div className="mt-8">
         <h2 className="sr-only">{who ? `Memories with ${who}` : "All memories"}</h2>
         {album.error ? (
-          <PatientMessage
+          <PatientEmptyState
             title="I couldn't open the memories just now"
             action={
               <Button size="xl" variant="secondary" icon={<RefreshCw className="h-6 w-6" aria-hidden="true" />} onClick={album.reload}>
@@ -75,7 +75,7 @@ export function MemoriesPage({ speech }: { speech: Speech }) {
             ))}
           </div>
         ) : !all.length ? (
-          <PatientMessage
+          <PatientEmptyState
             icon={<BookHeart className="h-10 w-10" aria-hidden="true" />}
             title="Your memory album is waiting"
             text="Memories from visits and family photos will appear here once they're added."

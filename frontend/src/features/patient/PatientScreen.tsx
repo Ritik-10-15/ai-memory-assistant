@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { BookHeart, Camera, CameraOff, HeartHandshake, House, Users } from "lucide-react";
+import { BookHeart, HeartHandshake, House, Users } from "lucide-react";
 import { api, ApiError } from "@/api/client";
 import { Button } from "@/components/ui";
 import { useAsync } from "@/hooks/useAsync";
@@ -14,6 +14,7 @@ import { MemoriesPage } from "./album/MemoriesPage";
 import { PersonPage } from "./album/PersonPage";
 import { PersonPhoto } from "./album/pieces";
 import { CameraPanel } from "./CameraPanel";
+import { CameraStatus } from "./CameraStatus";
 import {
   announcementFor,
   derivePatientView,
@@ -230,10 +231,8 @@ export function PatientScreen() {
       />
     ) : null;
 
-  const cameraOk = view.kind !== "camera-unavailable";
-
   return (
-    <div className="min-h-screen bg-paper pb-28 lg:pb-10">
+    <div className="theme-companion min-h-screen bg-paper pb-28 font-sans text-ink lg:pb-10">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-card focus:px-5 focus:py-3 focus:font-semibold focus:text-ink focus:shadow-raised"
@@ -244,22 +243,14 @@ export function PatientScreen() {
       <header className="border-b border-line bg-card/80">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link to="/" className="flex items-center gap-3 rounded-full">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-700 text-white">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage-700 text-white">
               <HeartHandshake className="h-6 w-6" aria-hidden="true" />
             </span>
             <span className="sr-only font-serif text-xl font-semibold text-ink sm:not-sr-only">Memory Assistant</span>
           </Link>
           <PatientNav variant="top" className="hidden lg:block" />
           <div className="flex items-center gap-4 text-right">
-            <span
-              className={cn(
-                "hidden items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold md:inline-flex",
-                cameraOk ? "bg-sage-50 text-sage-700" : "bg-danger-50 text-danger-700",
-              )}
-            >
-              {cameraOk ? <Camera className="h-4 w-4" aria-hidden="true" /> : <CameraOff className="h-4 w-4" aria-hidden="true" />}
-              {cameraOk ? "Camera on" : "Camera off"}
-            </span>
+            <CameraStatus view={view} className="hidden md:inline-flex" />
             <p className="leading-tight">
               <span className="block text-base font-semibold text-ink sm:text-lg">
                 {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}

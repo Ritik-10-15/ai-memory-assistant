@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Spinner } from "@/components/ui";
 import { CaregiverSignIn, PatientSignIn } from "@/features/auth/SignInPage";
+import { ErrorBoundary } from "@/features/patient/ErrorBoundary";
 import { PatientScreen } from "@/features/patient/PatientScreen";
 
 // The caregiver workspace (charts included) loads only when it's opened, so
@@ -13,7 +14,14 @@ const SitePage = lazy(() => import("@/features/site/SitePage"));
 export function App() {
   return (
     <Routes>
-      <Route path="/*" element={<PatientScreen />} />
+      <Route
+        path="/*"
+        element={
+          <ErrorBoundary>
+            <PatientScreen />
+          </ErrorBoundary>
+        }
+      />
       <Route
         path="/welcome"
         element={

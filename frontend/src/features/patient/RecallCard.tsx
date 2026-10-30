@@ -1,8 +1,9 @@
-import { MessageCircle, Square, Volume2 } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import type { MemorySnippet } from "@/api/types";
-import { Button, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatRelativeDay } from "@/lib/format";
+import { AudioControls } from "./AudioControls";
 
 interface RecallCardProps {
   name: string;
@@ -42,23 +43,8 @@ export function RecallCard({ name, lastMemory, lastMemoryAt, earlier, supported,
       </h4>
       <p className="mt-3 whitespace-pre-line text-2xl leading-relaxed text-ink">{lastMemory}</p>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        {supported ? (
-          speaking ? (
-            <Button size="xl" variant="danger" icon={<Square className="h-6 w-6" aria-hidden="true" />} onClick={onStop}>
-              Stop
-            </Button>
-          ) : (
-            <Button size="xl" icon={<Volume2 className="h-7 w-7" aria-hidden="true" />} onClick={onRead}>
-              Read aloud
-            </Button>
-          )
-        ) : (
-          <p className="text-lg text-ink-muted">Reading aloud isn't available in this browser.</p>
-        )}
-        <span role="status" className="text-lg text-ink-muted">
-          {speaking ? "Reading aloud… press Stop at any time." : ""}
-        </span>
+      <div className="mt-6">
+        <AudioControls supported={supported} speaking={speaking} onPlay={onRead} onStop={onStop} />
       </div>
 
       {earlier.length > 0 && (

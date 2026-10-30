@@ -40,6 +40,16 @@ right or wrong answers.
   - Recognition keeps running on every page. If someone arrives while the
     patient is browsing, a calm banner says who is here instead of switching
     pages.
+  - The patient app uses the same **companion** look as the public homepage
+    (mint, forest, plum, DM Serif Display and Inter). Colours and fonts are
+    themeable CSS variables (`frontend/theme.tokens.cjs`), so the caregiver
+    workspace keeps its own look from the same components.
+  - For a **confirmed** visitor only, their family photos are fetched from
+    `/api/family/<id>`. A late response can't land on the wrong person: the
+    previous request is aborted, the response must name the person asked
+    for, and the hook returns only data stored for the current visitor.
+  - Browsing a loved one's page says plainly that it doesn't mean they are
+    here; only the camera decides who is visiting.
 - **Caregiver workspace** (`/caregiver`): overview with system status, people
   with enrollment status, guided face enrollment, **family photos** (caption,
   story, date, who is in it, linked memory), profile pictures, memories, a

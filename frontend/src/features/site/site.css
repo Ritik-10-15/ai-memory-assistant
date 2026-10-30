@@ -1,8 +1,5 @@
-/* Public homepage only — loaded with the code-split /welcome page, so the
-   patient app and caregiver workspace never download these fonts. */
-@import "@fontsource/dm-serif-display/400.css";
-@import "@fontsource/dm-serif-display/400-italic.css";
-@import "@fontsource-variable/inter";
+/* Public homepage only (fonts are declared once in index.css and download
+   only on pages that use them). */
 
 .site-root {
   font-family: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;

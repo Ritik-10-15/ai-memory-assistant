@@ -140,7 +140,8 @@ export const api = {
 
   // Family album — patient read-only
   family: () => request<FamilyMember[]>("GET", "/api/family"),
-  familyMember: (id: string) => request<FamilyMemberDetail>("GET", `/api/family/${encodeURIComponent(id)}`),
+  familyMember: (id: string, signal?: AbortSignal) =>
+    request<FamilyMemberDetail>("GET", `/api/family/${encodeURIComponent(id)}`, undefined, signal),
   album: () => request<Album>("GET", "/api/album"),
   photoUrl: (photoId: string) => `/api/photos/${encodeURIComponent(photoId)}/image`,
 

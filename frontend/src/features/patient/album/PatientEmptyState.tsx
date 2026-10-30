@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /** A calm, large message for empty, loading-failed or offline situations. */
-export function PatientMessage({
+export function PatientEmptyState({
   icon,
   title,
   text,

@@ -15,6 +15,7 @@ import { formatRelativeDay } from "@/lib/format";
 import type { CameraProblem, PatientView } from "./recognitionView";
 import { PersonPhoto } from "./album/pieces";
 import { RecallCard } from "./RecallCard";
+import { VisitorMoreMemories } from "./VisitorMoreMemories";
 
 /** "Daughter" → "Your daughter"; leaves "My …"/"Your …" phrasing alone. */
 export function relationshipPhrase(relationship: string | null): string | null {
@@ -38,7 +39,7 @@ function StatusCard({
   action?: ReactNode;
 }) {
   const toneClass = {
-    calm: "bg-primary-50 text-primary-700",
+    calm: "bg-sage-50 text-sage-700",
     caution: "bg-caution-50 text-caution-700",
     neutral: "bg-paper text-ink-muted",
     problem: "bg-danger-50 text-danger-700",
@@ -149,7 +150,7 @@ export function VisitorPanel({ view, speech }: VisitorPanelProps) {
                 <h3 className="mt-3 break-words font-serif text-4xl font-semibold leading-tight text-ink sm:text-5xl">
                   This is {view.name}
                 </h3>
-                {relation && <p className="mt-2 text-2xl text-primary-700">{relation}</p>}
+                {relation && <p className="mt-2 text-2xl text-sage-700">{relation}</p>}
                 {lastVisit && (
                   <p className="mt-3 text-lg text-ink-muted">
                     You last saw {view.name.split(" ")[0]} {lastVisit}.
@@ -171,6 +172,7 @@ export function VisitorPanel({ view, speech }: VisitorPanelProps) {
             earlier={view.earlierMemories}
             {...speech}
           />
+          <VisitorMoreMemories key={view.personId} personId={view.personId} name={view.name} />
         </div>
       );
     }
