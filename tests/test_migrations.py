@@ -193,3 +193,14 @@ def test_demo_data_can_be_added_to_an_album_and_removed_again(client):
         assert c.execute("SELECT COUNT(*) FROM photos").fetchone()[0] == 0
         assert c.execute("SELECT COUNT(*) FROM album_photos").fetchone()[0] == 0
     assert not list(config.PHOTOS_DIR.glob("*.jpg"))
+
+
+def test_per_person_lookups_use_an_index(temp_db):
+    """Migration 2: people lists and recognition look up a person's visits
+    and memories by person_id; that must not scan the whole table."""
+    with database.get_db() as c:
+        for sql in ("SELECT MAX(started_at) FROM visits WHERE person_id='x'",
+                    "SELECT COUNT(*) FROM visits WHERE person_id='x'",
+                    "SELECT summary FROM memories WHERE person_id='x' ORDER BY created_at DESC LIMIT 3"):
+            plan = " ".join(r[-1] for r in c.execute("EXPLAIN QUERY PLAN " + sql))
+            assert "USING" in plan and "INDEX" in plan, (sql, plan)
