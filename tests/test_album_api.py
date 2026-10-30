@@ -163,3 +163,14 @@ def test_album_links_memories_to_their_photo(caregiver, sample_person):
     assert album["memories"][0]["person_name"] == "Test Person"
     assert album["photos"][0]["caption"] == "Lunch"
     assert "raw_transcript" not in album["memories"][0]
+
+
+def test_every_patient_page_loads_directly_behind_the_pin(client, monkeypatch):
+    """Refreshing or bookmarking any patient page serves the app (not 404),
+    and the patient PIN still applies."""
+    pages = ("/", "/family", "/family/abc", "/memories", "/albums", "/albums/" + "a" * 32)
+    for path in pages:
+        assert client.get(path).status_code == 200, path
+    monkeypatch.setattr(config, "PATIENT_PIN", "2468")
+    for path in pages:
+        assert client.get(path).status_code == 302, path
