@@ -65,7 +65,7 @@ right or wrong answers.
     memory read aloud, the way the patient will hear it.
   - **Visit history** with charts (and table alternatives), search, visitor
     and date-range filters (including custom dates) and sorting.
-  - **Family photos** (caption, story, date, who is in it, linked memory).
+  - **Albums & photos**: named albums with ordering, covers and a hide-from-patient switch; uploads with progress; title, story, date, place, prompt, people and linked memory for each photo (see below).
   - **Settings** that exist: larger text and reduced motion for this device,
     read-only camera/recognition/PIN status, sign out, CSV export.
 
@@ -245,6 +245,8 @@ camera.py              Server webcam / browser frames → worker queue
 routes.py              Patient API, video stream, page routes, legacy forms
 api.py                 JSON API for the React app (session, caregiver data)
 album_api.py           Family photos + read-only patient album endpoints
+albums_api.py          Photo albums (caregiver management, patient read-only)
+migrations.py          Numbered schema migrations (upgrade / rollback)
 auth.py                Session gates, constant-time checks, login throttling
 frontend/              React + TypeScript app (see below)
 tests/                 pytest suite (backend)
@@ -266,29 +268,97 @@ frontend/e2e/          Playwright tests (desktop, tablet, mobile)
 
 ---
 
-## Family album and reminiscence
+## Family photo albums and reminiscence
 
 Family photos are stored separately from the **biometric** enrollment photos
-in `known_faces/`. The album adds two tables and changes nothing that already
-existed:
+in `known_faces/`, as files in `DATA_DIR/photos/` (outside any public folder)
+with database references. Nothing that existed before was changed or removed.
 
 | Table | Purpose |
 |---|---|
-| `photos` | id, caption, story, approximate date (free text), optional `memory_id` |
-| `photo_people` | who is in each photo (many-to-many) |
+| `photos` | caption (title), story, approximate date and place (free text, only if known), category, caregiver-written conversation prompt, size, optional `memory_id` (the conversation it illustrates) |
+| `photo_people` | who is in each photo — many-to-many, so one birthday photo can show Alex *and* Sarah |
+| `albums` | title, description, chosen cover photo, shown to the patient or hidden |
+| `album_photos` | which photos are in which album, in order (a photo can be in several albums) |
 
-A person's picture is their chosen profile photo (the previously unused
-`people.photo_path` column) or, by default, their first enrollment photo.
+**Caregivers** (*Albums & photos*): create, rename and describe albums; hide
+an album while putting it together; upload photos with a real progress bar
+and a result for every file; tag people, date, place, story, category and an
+optional prompt; link a photo to a saved conversation; reorder with
+**Move up / Move down** buttons (keyboard-friendly, focus stays on the moved
+photo); choose the cover; remove a photo from an album (it stays in *All
+photos*) or delete it everywhere; delete an album with or without the photos
+that aren't in any other album. Every destructive action asks first.
 
-- **Patient endpoints are read-only** (`/api/family`, `/api/family/<id>`,
-  `/api/album`) and sit behind the patient PIN. They return names,
-  relationships, descriptions, memory summaries, photo stories and visit
-  dates; never transcripts, recognition scores or enrollment photos.
-- **Uploads are re-encoded**: downscaled to 1600 px and saved as JPEG, which
-  removes EXIF metadata such as GPS location.
-- **Prompts are invitations, not tests**: "Would you like to hear about this
-  day?", "Shall we look at another?". The app never asks the patient to
-  recall a name or a fact.
+**Patients** (*Albums*): large album covers, an album page with story cards,
+and a full-screen viewer — the whole photo, who is in it and how they're
+related, when and where, the story, the conversation it came up in, and a
+gentle optional prompt. Big Previous / Next buttons and the arrow keys move
+between photos; Escape closes. Nothing plays or moves by itself; Listen reads
+the story aloud with the device's voice and moving on stops it.
+
+**Privacy rules**
+
+- Patient endpoints are read-only (`/api/family`, `/api/family/<id>`,
+  `/api/album`, `/api/albums`, `/api/albums/<id>`) and sit behind the patient
+  PIN. They return names, relationships, descriptions, memory summaries,
+  photo stories and visit dates; never transcripts, recognition scores,
+  enrollment photos or the titles of hidden albums.
+- A photo that is **only in hidden albums** is never shown to the patient:
+  not in albums, Memories, a person's page, counts, or the image URL itself
+  (404 unless a caregiver is signed in).
+- Recognition is unchanged. Only a **confirmed** visitor's photos are offered
+  on Home ("Photos with Sarah"); an uncertain or unknown face shows nothing
+  person-specific. If the visitor changes, their photo viewer closes and its
+  reading stops. Browsing albums by hand never depends on the camera.
+- Photos are never sent to an external service.
+
+**Uploads** (caregiver only): JPEG, PNG or WebP, recognised from the file's
+contents (the name and browser-supplied type are ignored); at most 15 MB per
+file and 20 per request; the image must decode. Accepted photos are
+downscaled to 1600 px and re-encoded as JPEG (removing EXIF data such as GPS
+location), with a 480 px thumbnail for grids. Stored names are random ids,
+so a crafted id can't reach outside the photos folder. Deleting a photo
+removes the file, its thumbnail and every reference to it.
+
+**Prompts are invitations, not tests.** A caregiver's own prompt comes first;
+otherwise a neutral template that fits what's there ("Would you like to hear
+the story behind this photo?", "Would you like to listen to this memory?",
+"Shall we explore another family moment?"). The app never asks the patient
+to recall a name or a fact, and never invents details.
+
+### Album API
+
+| Method & path | Who | Does |
+|---|---|---|
+| `GET /api/caregiver/albums` | caregiver | all albums, with cover and photo count |
+| `POST /api/caregiver/albums` | caregiver | create `{title, description, visible_to_patient}` |
+| `GET / PATCH / DELETE /api/caregiver/albums/<id>` | caregiver | read, edit (title, description, visibility, `cover_photo_id`), delete (`?delete_photos=1` also deletes photos in no other album) |
+| `POST /api/caregiver/albums/<id>/photos` | caregiver | multipart upload into the album, or JSON `{photo_ids}` to add library photos |
+| `PUT /api/caregiver/albums/<id>/photos/order` | caregiver | `{photo_ids}` in the new order (must list each photo once) |
+| `DELETE /api/caregiver/albums/<id>/photos/<photo_id>` | caregiver | take a photo out of the album |
+| `GET /api/albums` | patient | albums shown to the patient |
+| `GET /api/albums/<id>?limit=&offset=` | patient | one page of an album (default 60, max 200) |
+| `GET /api/photos/<id>/image?size=thumb` | patient | the image or its thumbnail |
+
+Errors are JSON `{"error": "..."}` with the usual status codes (400 invalid,
+401 signed out, 404 not found or hidden, 413 request too large).
+
+### Database migrations
+
+The schema version is kept in SQLite's `PRAGMA user_version`; `migrations.py`
+holds numbered, additive migrations that run automatically on startup.
+
+- **Upgrade**: before migrating a database that already holds data, the app
+  writes a full copy next to it (`memory_v2.db.bak-v<from>`). Each migration
+  runs in a single transaction, so it applies completely or not at all.
+- **Rollback**: stop the app, then either restore that copy or run
+  `python scripts/db_migrate.py down 0`, which removes only what migrations
+  added (album tables and the new photo columns) and keeps every person,
+  visit, memory and photo. Run the matching older code afterwards, since the
+  app upgrades again on start.
+- `python scripts/db_migrate.py status` shows the current version.
+- Foreign keys are now enforced; deletes remove dependent rows first.
 
 ### Demo data
 
@@ -423,6 +493,13 @@ contrast) in a real browser. GitHub Actions runs all of it on every push.
   product.
 - This is a prototype and assistive aid, not a medical device. It has not been
   assessed for HIPAA or any other healthcare compliance regime.
+- Albums have no per-person sharing rules: every album shown to the patient
+  is visible on the patient device. Use *hidden* for anything not ready.
+- "Narration" is the device reading the story aloud; recorded voices aren't
+  stored. Dates and places are what the caregiver types — nothing is read
+  from photo metadata (GPS is removed on upload for privacy).
+- Photos are sorted in each album by hand; there is no automatic face
+  tagging of family photos (people are tagged by the caregiver).
 - There is a single shared caregiver password (from `CAREGIVER_PASSWORD`);
   there are no individual caregiver accounts, roles or in-app password changes.
 - Memories can be edited (summary text only, `PUT /api/caregiver/memories/<id>`;

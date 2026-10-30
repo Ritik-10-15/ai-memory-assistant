@@ -35,6 +35,12 @@ def _error(message, status):
     return jsonify({"error": message}), status
 
 
+@app.errorhandler(413)
+def _too_large(_e):
+    """Requests over MAX_CONTENT_LENGTH: a JSON message, not an HTML page."""
+    return _error("That upload is too large. Try fewer or smaller photos at a time.", 413)
+
+
 def _reload_gallery():
     threading.Thread(target=load_known_faces, daemon=True).start()
 
@@ -294,10 +300,14 @@ def api_delete_person(pid):
     if not _load_person(pid):
         return _error("Person not found.", 404)
     with get_db() as c:
-        c.execute("DELETE FROM people WHERE id=?", (pid,))
-        c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
-        c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+        # Children first: foreign keys are enforced. Photos stay, but no longer
+        # illustrate this person's (deleted) memories.
+        c.execute("UPDATE photos SET memory_id=NULL WHERE memory_id IN "
+                  "(SELECT id FROM memories WHERE person_id=?)", (pid,))
         c.execute("DELETE FROM photo_people WHERE person_id=?", (pid,))
+        c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
+        c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
+        c.execute("DELETE FROM people WHERE id=?", (pid,))
     d = _face_dir(pid)
     if d is not None and d.exists():
         shutil.rmtree(d)
@@ -363,6 +373,7 @@ def api_update_memory(mem_id):
 @caregiver_required
 def api_delete_memory(mem_id):
     with get_db() as c:
+        c.execute("UPDATE photos SET memory_id=NULL WHERE memory_id=?", (mem_id,))
         cur = c.execute("DELETE FROM memories WHERE id=?", (mem_id,))
     if cur.rowcount == 0:
         return _error("Memory not found.", 404)

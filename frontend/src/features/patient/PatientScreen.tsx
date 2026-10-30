@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { BookHeart, HeartHandshake, House, Users } from "lucide-react";
+import { BookHeart, BookImage, HeartHandshake, House, Users } from "lucide-react";
 import { api, ApiError } from "@/api/client";
 import { Button } from "@/components/ui";
 import { useAsync } from "@/hooks/useAsync";
 import { usePageVisible } from "@/hooks/usePageVisible";
 import { cn } from "@/lib/cn";
 import { formatRelativeDay } from "@/lib/format";
+import { AlbumShelfPage } from "./album/AlbumShelfPage";
+import { AlbumViewPage } from "./album/AlbumViewPage";
 import { FamilyPage } from "./album/FamilyPage";
 import { FamilyStrip } from "./album/FamilyStrip";
 import { FeaturedMemory } from "./album/FeaturedMemory";
@@ -49,6 +51,7 @@ function useNow(intervalMs = 15_000) {
 const NAV = [
   { to: "/", label: "Home", icon: House, end: true },
   { to: "/family", label: "Family", icon: Users, end: false },
+  { to: "/albums", label: "Albums", icon: BookImage, end: false },
   { to: "/memories", label: "Memories", icon: BookHeart, end: false },
 ];
 
@@ -121,6 +124,7 @@ function HomeVisitor({
         </h2>
         <VisitorPanel
           view={view}
+          voice={speech}
           speech={{
             supported: speech.supported,
             speaking: speech.speakingId === "visitor",
@@ -190,10 +194,11 @@ export function PatientScreen() {
   // ── Read aloud: one voice for the whole app ─────────────────────
   const speech = useSpeech();
   const { stop: stopSpeech, speakingId } = speech;
-  // The visitor recap stops the moment the situation changes (a different
-  // visitor, an unknown face, nobody, or an outage).
+  // Anything read aloud about the visitor (the recap, or one of their photos:
+  // ids starting "visitor") stops the moment the situation changes — a
+  // different visitor, an unknown face, nobody, or an outage.
   useEffect(() => {
-    if (speakingId === "visitor") stopSpeech();
+    if (speakingId?.startsWith("visitor")) stopSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   // Anything stops when the page changes or the tab is hidden.
@@ -277,6 +282,8 @@ export function PatientScreen() {
             <Route index element={<HomeVisitor view={view} speech={speech} readAloud={readAloud} notes={notes} />} />
             <Route path="family" element={<FamilyPage />} />
             <Route path="family/:id" element={<PersonPage speech={speech} />} />
+            <Route path="albums" element={<AlbumShelfPage />} />
+            <Route path="albums/:id" element={<AlbumViewPage speech={speech} />} />
             <Route path="memories" element={<MemoriesPage speech={speech} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

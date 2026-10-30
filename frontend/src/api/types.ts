@@ -156,6 +156,18 @@ export interface PersonInput {
 export interface PhotoPerson {
   id: string;
   name: string;
+  relationship: string;
+}
+
+export const PHOTO_CATEGORIES = ["family", "celebration", "holiday", "home", "friends", "everyday"] as const;
+export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
+
+/** The conversation memory a photo illustrates (summary only, never the transcript). */
+export interface PhotoMemory {
+  id: number;
+  summary: string;
+  person_name: string;
+  created_at: string;
 }
 
 /** A family photo (not a biometric enrollment photo). */
@@ -165,10 +177,62 @@ export interface FamilyPhoto {
   story: string;
   /** Free-form approximate date, e.g. "1998", "1998-07", "Summer 1998". */
   taken_on: string;
+  /** Typed by the caregiver (GPS data is stripped from uploads). */
+  location: string;
+  category: PhotoCategory | "";
+  /** Caregiver-written invitation to talk, e.g. "Would you like to hear about the pier?" */
+  prompt: string;
+  width: number | null;
+  height: number | null;
   memory_id: number | null;
+  memory: PhotoMemory | null;
   created_at: string;
   people: PhotoPerson[];
+  /** Caregiver views only. */
+  albums?: Array<{ id: string; title: string }>;
 }
+
+// ── Photo albums (albums_api.py) ────────────────────────────────────
+
+/** What the patient sees of an album (GET /api/albums). */
+export interface AlbumSummary {
+  id: string;
+  title: string;
+  description: string;
+  /** The chosen cover, else the first photo; null when the album is empty. */
+  cover_photo_id: string | null;
+  photo_count: number;
+  updated_at: string;
+}
+
+/** GET /api/albums/<id> — one page of an album's photos, in album order. */
+export interface AlbumPage {
+  album: AlbumSummary;
+  photos: FamilyPhoto[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface CaregiverAlbum extends AlbumSummary {
+  cover_chosen: boolean;
+  visible_to_patient: boolean;
+  created_at: string;
+}
+
+/** GET /api/caregiver/albums/<id> */
+export interface AlbumDetail {
+  album: CaregiverAlbum;
+  photos: FamilyPhoto[];
+}
+
+export interface AlbumInput {
+  title: string;
+  description: string;
+  visible_to_patient: boolean;
+}
+
+export type UploadRejection = "unsupported_type" | "too_large" | "invalid_image";
 
 /** GET /api/family — what the patient sees about each person. */
 export interface FamilyMember {
@@ -210,11 +274,14 @@ export interface PhotoDetailsInput {
   caption: string;
   story: string;
   taken_on: string;
+  location: string;
+  category: PhotoCategory | "";
+  prompt: string;
   memory_id: number | null;
   person_ids: string[];
 }
 
 export interface UploadPhotosResult {
   photos: FamilyPhoto[];
-  rejected: Array<{ filename: string; status: "invalid_image" }>;
+  rejected: Array<{ filename: string; status: UploadRejection }>;
 }

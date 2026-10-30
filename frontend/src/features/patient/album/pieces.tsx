@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ImageOff, Square, Volume2 } from "lucide-react";
 import { api } from "@/api/client";
-import type { AlbumMemory, FamilyPhoto } from "@/api/types";
+import type { AlbumMemory, FamilyPhoto, PhotoMemory } from "@/api/types";
 import { Avatar, Button } from "@/components/ui";
 import { toneFor } from "@/components/ui/Avatar";
 import { cn } from "@/lib/cn";
@@ -15,29 +15,54 @@ export function FramedPhoto({
   aspect = "aspect-[4/3]",
   className,
   fallback,
+  srcSet,
+  sizes,
+  fit = "cover",
 }: {
   src: string | null;
   alt: string;
   aspect?: string;
   className?: string;
   fallback?: ReactNode;
+  srcSet?: string;
+  sizes?: string;
+  /** "contain" shows the whole photo (the viewer); "cover" fills the frame (tiles). */
+  fit?: "cover" | "contain";
 }) {
   const [failed, setFailed] = useState(false);
   return (
     <div className={cn("photo-frame", className)}>
       <div className={cn("relative overflow-hidden rounded-xl bg-paper", aspect)}>
         {src && !failed ? (
-          <img src={src} alt={alt} loading="lazy" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+          <img
+            src={src}
+            srcSet={srcSet}
+            sizes={sizes}
+            alt={alt}
+            loading="lazy"
+            className={cn("h-full w-full", fit === "cover" ? "object-cover" : "object-contain")}
+            onError={() => setFailed(true)}
+          />
         ) : (
           (fallback ?? (
-            <div className="flex h-full w-full items-center justify-center text-ink-muted" role="img" aria-label={alt}>
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-ink-muted" role="img" aria-label={`${alt} (this photo can't be shown right now)`}>
               <ImageOff className="h-10 w-10" aria-hidden="true" />
+              <span aria-hidden="true" className="px-4 text-center text-base">This photo can't be shown right now</span>
             </div>
           ))
         )}
       </div>
     </div>
   );
+}
+
+/** Small file for tiles, full size when the tile is large on a sharp screen. */
+export function tileImage(photoId: string, sizes = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw") {
+  return {
+    src: api.photoUrl(photoId, "thumb"),
+    srcSet: `${api.photoUrl(photoId, "thumb")} 480w, ${api.photoUrl(photoId)} 1600w`,
+    sizes,
+  };
 }
 
 /** A person's picture as a large album tile, with a warm monogram if there is none. */
@@ -134,10 +159,35 @@ export function itemWhen(item: AlbumItem): string {
   return formatDate(item.date);
 }
 
-/** Gentle, pressure-free invitation — never a question with a right answer. */
+/** "Summer 1998 · Whitby" — the place only when the caregiver gave one. */
+export function itemWhenWhere(item: AlbumItem): string {
+  return [itemWhen(item), item.photo?.location].filter(Boolean).join(" · ");
+}
+
+/** The conversation a photo illustrates, if any (photo items only — a memory item IS the conversation). */
+export function itemHighlight(item: AlbumItem): PhotoMemory | null {
+  return item.kind === "photo" ? item.photo.memory : null;
+}
+
+export type PromptAction = "listen" | "next" | null;
+
+/**
+ * A gentle, optional invitation. The caregiver's own prompt comes first;
+ * otherwise a neutral template that fits what is actually there. Never a
+ * question with a right answer, and never invented details.
+ */
+export function guidedPrompt(item: AlbumItem): { text: string; action: PromptAction } {
+  const hasWords = Boolean(itemText(item) || itemHighlight(item));
+  if (item.photo?.prompt) return { text: item.photo.prompt, action: hasWords ? "listen" : null };
+  if (item.kind === "memory") return { text: "Would you like to listen to this memory?", action: "listen" };
+  if (item.photo.story) return { text: "Would you like to hear the story behind this photo?", action: "listen" };
+  if (itemHighlight(item)) return { text: "Would you like to hear what you talked about?", action: "listen" };
+  return { text: "Shall we explore another family moment?", action: "next" };
+}
+
+/** Short version for album cards. */
 export function itemPrompt(item: AlbumItem): string {
-  if (item.kind === "memory") return item.photo ? "Would you like to hear about this day?" : "Would you like to listen to this memory?";
-  return item.photo.story ? "Shall we look at this photo together?" : "A photo to enjoy.";
+  return guidedPrompt(item).text;
 }
 
 /** What reading aloud says for an item. */
@@ -145,7 +195,14 @@ export function itemSpeech(item: AlbumItem): string {
   const parts = [itemTitle(item) + "."];
   const text = itemText(item);
   if (text) parts.push(text);
+  const highlight = itemHighlight(item);
+  if (highlight?.summary) parts.push(`From a conversation with ${highlight.person_name}: ${highlight.summary}`);
   return parts.join(" ");
+}
+
+/** Albums, a person's page or a visitor: photos as album items (newest first by default). */
+export function photoItems(photos: FamilyPhoto[], keyPrefix = "photo"): AlbumItem[] {
+  return photos.map((p) => ({ kind: "photo" as const, key: `${keyPrefix}:${p.id}`, date: p.created_at, photo: p }));
 }
 
 export function peopleSentence(names: string[]): string {
@@ -175,7 +232,7 @@ export function AlbumCard({ item, speech, onOpen }: { item: AlbumItem; speech: S
           aria-label={`Look at this photo: ${itemTitle(item)}`}
           disabled={!onOpen}
         >
-          <FramedPhoto src={api.photoUrl(photo.id)} alt={photoAlt(photo)} className="shadow-none ring-0" />
+          <FramedPhoto {...tileImage(photo.id)} alt={photoAlt(photo)} className="shadow-none ring-0" />
         </button>
       )}
       {!photo && item.kind === "memory" && (
@@ -185,7 +242,7 @@ export function AlbumCard({ item, speech, onOpen }: { item: AlbumItem; speech: S
         </div>
       )}
       <div className="flex flex-1 flex-col gap-3 p-6">
-        <p className="text-base text-ink-muted">{itemWhen(item)}</p>
+        <p className="text-base text-ink-muted">{itemWhenWhere(item)}</p>
         <h3 className="font-serif text-2xl font-semibold leading-snug text-ink">{itemTitle(item)}</h3>
         {text && <p className="whitespace-pre-line text-xl leading-relaxed text-ink">{text}</p>}
         {people.length > 0 && item.kind === "photo" && (

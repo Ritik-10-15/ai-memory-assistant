@@ -57,7 +57,8 @@ def test_upload_tags_people_and_reencodes(caregiver, sample_person, second_perso
                           (io.BytesIO(b"not an image"), "broken.jpg")])
     assert resp.status_code == 201
     body = resp.get_json()
-    assert body["rejected"] == [{"filename": "broken.jpg", "status": "invalid_image"}]
+    # Not image bytes at all, despite the .jpg name: refused before decoding.
+    assert body["rejected"] == [{"filename": "broken.jpg", "status": "unsupported_type"}]
     photo = body["photos"][0]
     assert photo["caption"] == "Beach day" and photo["taken_on"] == "1998-07"
     assert sorted(p["name"] for p in photo["people"]) == ["Ana Lee", "Test Person"]

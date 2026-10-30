@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { api } from "@/api/client";
 import type { CurrentPerson, FamilyMemberDetail, FamilyPhoto } from "@/api/types";
 import { axeViolations } from "@/test/axe";
-import { idle, john, maybeSarah, sarah, serverStatus, unknownFace } from "@/test/fixtures";
+import { idle, john, maybeSarah, photoExtras, sarah, serverStatus, unknownFace } from "@/test/fixtures";
 import { installSpeechMock } from "@/test/speech";
 import { CameraStatus } from "./CameraStatus";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -19,7 +19,8 @@ const photo = (id: string, caption: string, personId: string, name: string): Fam
   taken_on: "1998",
   memory_id: null,
   created_at: "2026-10-01 10:00:00",
-  people: [{ id: personId, name }],
+  people: [{ id: personId, name, relationship: "" }],
+  ...photoExtras,
 });
 
 const detail = (who: CurrentPerson, caption: string): FamilyMemberDetail => ({

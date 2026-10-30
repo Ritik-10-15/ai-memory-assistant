@@ -15,6 +15,7 @@ import { formatRelativeDay } from "@/lib/format";
 import type { CameraProblem, PatientView } from "./recognitionView";
 import { PersonPhoto } from "./album/pieces";
 import { RecallCard } from "./RecallCard";
+import type { Speech } from "./useSpeech";
 import { VisitorMoreMemories } from "./VisitorMoreMemories";
 
 /** "Daughter" → "Your daughter"; leaves "My …"/"Your …" phrasing alone. */
@@ -66,9 +67,11 @@ const ICON = "h-10 w-10";
 interface VisitorPanelProps {
   view: PatientView;
   speech: { supported: boolean; speaking: boolean; onRead: () => void; onStop: () => void };
+  /** The app's voice, for reading the confirmed visitor's photos aloud. */
+  voice?: Speech;
 }
 
-export function VisitorPanel({ view, speech }: VisitorPanelProps) {
+export function VisitorPanel({ view, speech, voice }: VisitorPanelProps) {
   switch (view.kind) {
     case "connecting":
       return (
@@ -172,7 +175,7 @@ export function VisitorPanel({ view, speech }: VisitorPanelProps) {
             earlier={view.earlierMemories}
             {...speech}
           />
-          <VisitorMoreMemories key={view.personId} personId={view.personId} name={view.name} />
+          <VisitorMoreMemories key={view.personId} personId={view.personId} name={view.name} voice={voice} />
         </div>
       );
     }

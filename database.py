@@ -6,7 +6,10 @@ definition itself (CREATE TABLE). Other modules use get_db() to run their
 own queries against the tables defined here.
 """
 import sqlite3
+from pathlib import Path
+
 import config
+import migrations
 
 
 def get_db():
@@ -15,10 +18,16 @@ def get_db():
     conn = sqlite3.connect(config.DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    # Enforce the declared foreign keys (per connection in SQLite). Deletes
+    # therefore remove child rows first; album tables cascade on their own.
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
 def init_db():
+    # An existing database that still needs migrating is backed up first.
+    db = Path(config.DB_PATH)
+    had_data = db.exists() and db.stat().st_size > 0
     with get_db() as c:
         c.executescript("""
         CREATE TABLE IF NOT EXISTS people (
@@ -63,4 +72,5 @@ def init_db():
             FOREIGN KEY(person_id) REFERENCES people(id)
         );
         """)
+    migrations.upgrade(make_backup=had_data)
     print("✅ Database ready")

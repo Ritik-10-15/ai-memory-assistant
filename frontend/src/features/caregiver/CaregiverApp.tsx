@@ -9,6 +9,8 @@ import { OverviewPage } from "./pages/OverviewPage";
 import { PeoplePage } from "./pages/PeoplePage";
 import { PersonEditorPage } from "./pages/PersonEditorPage";
 import { PersonProfilePage } from "./pages/PersonProfilePage";
+import { AlbumEditorPage } from "./pages/AlbumEditorPage";
+import { AlbumsPage } from "./pages/AlbumsPage";
 import { PhotosPage } from "./pages/PhotosPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { VisitsPage } from "./pages/VisitsPage";
@@ -56,6 +58,8 @@ export default function CaregiverApp() {
         <Route path="people/:id" element={<PersonProfilePage />} />
         <Route path="enroll" element={<EnrollmentPage />} />
         <Route path="enroll/:id" element={<EnrollmentPage />} />
+        <Route path="albums" element={<AlbumsPage />} />
+        <Route path="albums/:id" element={<AlbumEditorPage />} />
         <Route path="photos" element={<PhotosPage />} />
         <Route path="memories" element={<MemoriesPage />} />
         <Route path="visits" element={<VisitsPage />} />

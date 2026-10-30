@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { api, ApiError, UNAUTHORIZED_EVENT } from "@/api/client";
 import type { FamilyPhoto, Memory, Person } from "@/api/types";
 import { axeViolations } from "@/test/axe";
-import { serverStatus } from "@/test/fixtures";
+import { photoExtras, serverStatus } from "@/test/fixtures";
 import CaregiverApp from "./CaregiverApp";
 import { CAPTURE_TARGET } from "./pages/EnrollmentPage";
 
@@ -219,7 +219,8 @@ const beachPhoto: FamilyPhoto = {
   taken_on: "Summer 1998",
   memory_id: null,
   created_at: "2026-10-01 10:00:00",
-  people: [{ id: sarah.id, name: sarah.name }],
+  people: [{ id: sarah.id, name: sarah.name, relationship: sarah.relationship }],
+  ...photoExtras,
 };
 
 describe("family photos", () => {
@@ -228,24 +229,33 @@ describe("family photos", () => {
     const upload = vi.spyOn(api, "uploadPhotos").mockResolvedValue({ photos: [beachPhoto], rejected: [] });
     const user = userEvent.setup();
     renderAt("/caregiver/photos");
-    expect(await screen.findByText("The album is empty")).toBeInTheDocument();
+    expect(await screen.findByText("No photos yet")).toBeInTheDocument();
 
     const file = new File(["jpeg"], "beach.jpg", { type: "image/jpeg" });
     await user.upload(screen.getByLabelText("Photos"), file);
-    await user.type(screen.getByLabelText("Caption"), "Whitby beach");
+    await user.type(screen.getByLabelText("Title"), "Whitby beach");
     await user.type(screen.getByLabelText("When (roughly)"), "Summer 1998");
     await user.type(screen.getByLabelText("The story behind it"), "A sunny day by the sea.");
     await user.click(screen.getByRole("checkbox", { name: /Sarah Johnson/ }));
-    await user.click(screen.getByRole("button", { name: "Add to album" }));
+    await user.click(screen.getByRole("button", { name: "Add photos" }));
 
-    expect(upload).toHaveBeenCalledWith([file], {
-      caption: "Whitby beach",
-      story: "A sunny day by the sea.",
-      taken_on: "Summer 1998",
-      memory_id: null,
-      person_ids: [sarah.id],
-    });
-    expect(await screen.findByText("1 photo added to the album.")).toBeInTheDocument();
+    // One request per file, with a progress callback and a way to cancel.
+    expect(upload).toHaveBeenCalledWith(
+      [file],
+      {
+        caption: "Whitby beach",
+        story: "A sunny day by the sea.",
+        taken_on: "Summer 1998",
+        location: "",
+        category: "",
+        prompt: "",
+        memory_id: null,
+        person_ids: [sarah.id],
+      },
+      expect.any(Function),
+      expect.any(AbortSignal),
+    );
+    expect(await screen.findByText("1 of 1 photo added.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Whitby beach" })).toBeInTheDocument();
   });
 
@@ -254,7 +264,7 @@ describe("family photos", () => {
     const upload = vi.spyOn(api, "uploadPhotos");
     const user = userEvent.setup();
     renderAt("/caregiver/photos");
-    await user.click(await screen.findByRole("button", { name: "Add to album" }));
+    await user.click(await screen.findByRole("button", { name: "Add photos" }));
     expect(screen.getByText("Choose at least one photo.")).toBeInTheDocument();
     expect(upload).not.toHaveBeenCalled();
   });
@@ -269,7 +279,7 @@ describe("family photos", () => {
 
     await user.click(await screen.findByRole("button", { name: "Edit Whitby beach" }));
     const dialog = screen.getByRole("dialog", { name: "Edit photo details" });
-    const caption = within(dialog).getByLabelText("Caption");
+    const caption = within(dialog).getByLabelText("Title");
     await user.clear(caption);
     await user.type(caption, "Whitby harbour");
     await user.selectOptions(within(dialog).getByLabelText(/Show with a memory/), String(memory.id));

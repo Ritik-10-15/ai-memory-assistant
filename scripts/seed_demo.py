@@ -52,14 +52,20 @@ def remove():
         photo_ids = {r["photo_id"] for pid in ids
                      for r in c.execute("SELECT photo_id FROM photo_people WHERE person_id=?", (pid,))}
         for pid in ids:
+            # Children first (foreign keys are enforced): unlink photos from
+            # the memories about to go.
+            c.execute("UPDATE photos SET memory_id=NULL WHERE memory_id IN "
+                      "(SELECT id FROM memories WHERE person_id=?)", (pid,))
             c.execute("DELETE FROM memories WHERE person_id=?", (pid,))
             c.execute("DELETE FROM visits WHERE person_id=?", (pid,))
             c.execute("DELETE FROM photo_people WHERE person_id=?", (pid,))
             c.execute("DELETE FROM people WHERE id=?", (pid,))
         for ph in photo_ids:
             if not c.execute("SELECT 1 FROM photo_people WHERE photo_id=?", (ph,)).fetchone():
-                c.execute("DELETE FROM photos WHERE id=?", (ph,))
-                (config.PHOTOS_DIR / f"{ph}.jpg").unlink(missing_ok=True)
+                c.execute("UPDATE people SET photo_path=NULL WHERE photo_path=?", (ph,))
+                c.execute("DELETE FROM photos WHERE id=?", (ph,))   # album links cascade
+                for name in (f"{ph}.jpg", f"{ph}_thumb.jpg"):
+                    (config.PHOTOS_DIR / name).unlink(missing_ok=True)
     print(f"Removed {len(ids)} demo people and their memories and photos.")
 
 

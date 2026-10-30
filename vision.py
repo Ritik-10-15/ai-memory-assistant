@@ -7,6 +7,7 @@ from the worker thread, from routes, or from tests, with no web server
 required. That separation is what let the whole LBPH->SFace engine swap
 happen without touching a single route earlier in this project.
 """
+import sqlite3
 import threading
 import time
 
@@ -244,14 +245,19 @@ class VisitTracker:
                 self._close()
             if not pid:
                 return
-            with get_db() as c:
-                cur = c.execute(
-                    "INSERT INTO visits (person_id,confidence,emotion) VALUES(?,?,?)",
-                    (pid, conf, emotion))
-                self._visit_id  = cur.lastrowid
-                self._person_id = pid
-                self._start     = now
-                self._last_seen = now
+            try:
+                with get_db() as c:
+                    cur = c.execute(
+                        "INSERT INTO visits (person_id,confidence,emotion) VALUES(?,?,?)",
+                        (pid, conf, emotion))
+            except sqlite3.IntegrityError:
+                # Deleted moments ago but still in the in-memory gallery
+                # until it reloads: record nothing rather than fail.
+                return
+            self._visit_id  = cur.lastrowid
+            self._person_id = pid
+            self._start     = now
+            self._last_seen = now
             speak_greeting(pid)
 
     def tick(self):

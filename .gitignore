@@ -21,6 +21,10 @@ models/
 # Enrolled face photos (biometric / personal data — keep private)
 known_faces/
 
+# Family photos and pre-migration database backups (personal data)
+/photos/
+memory_v2.db.bak-*
+
 # Uploaded audio + generated caches
 uploads/
 gallery_cache.npz

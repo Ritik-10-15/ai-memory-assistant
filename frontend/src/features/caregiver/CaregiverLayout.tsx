@@ -23,25 +23,28 @@ export const NAV = [
   { to: "/caregiver", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/caregiver/people", label: "Loved ones", icon: Users },
   { to: "/caregiver/enroll", label: "Face enrollment", icon: ScanFace },
-  { to: "/caregiver/photos", label: "Family photos", icon: Images },
+  // Also active on the photo library tab (/caregiver/photos).
+  { to: "/caregiver/albums", label: "Albums & photos", icon: Images, also: "/caregiver/photos" },
   { to: "/caregiver/memories", label: "Memories", icon: MessageSquareText },
   { to: "/caregiver/visits", label: "Visit history", icon: CalendarClock },
   { to: "/caregiver/settings", label: "Settings", icon: Settings },
 ];
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
+  const { pathname } = useLocation();
   return (
     <ul className="space-y-1">
-      {NAV.map(({ to, label, icon: Icon, end }) => (
+      {NAV.map(({ to, label, icon: Icon, end, also }) => (
         <li key={to}>
           <NavLink
             to={to}
             end={end}
             onClick={onNavigate}
+            aria-current={also && pathname.startsWith(also) ? "page" : undefined}
             className={({ isActive }) =>
               cn(
                 "relative flex min-h-11 items-center gap-3 rounded-2xl px-3.5 text-[15px] font-medium transition-colors",
-                isActive
+                isActive || (also && pathname.startsWith(also))
                   ? "bg-sage-50 font-semibold text-sage-700 before:absolute before:inset-y-2.5 before:left-0 before:w-1 before:rounded-full before:bg-primary-600"
                   : "text-ink-muted hover:bg-paper hover:text-ink",
               )
