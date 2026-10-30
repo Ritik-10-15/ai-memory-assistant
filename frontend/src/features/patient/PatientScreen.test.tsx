@@ -175,7 +175,8 @@ describe("PatientScreen audio controls", () => {
     const cancelsBefore = speech.synth.cancel.mock.calls.length;
     await screen.findByRole("heading", { name: "This is John Smith" }, { timeout: 3000 });
     expect(speech.synth.cancel.mock.calls.length).toBeGreaterThan(cancelsBefore);
-    expect(screen.getByRole("button", { name: "Read aloud" })).toBeInTheDocument();
+    // John's memories load just after his name appears, then the button returns.
+    expect(await screen.findByRole("button", { name: "Read aloud" })).toBeInTheDocument();
   });
 
   it("explains when the browser cannot read aloud", async () => {

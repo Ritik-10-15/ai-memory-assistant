@@ -113,6 +113,7 @@ describe("loved ones directory", () => {
     const user = userEvent.setup();
     renderAt(`/caregiver/people/${sarah.id}/edit`);
     const rel = await screen.findByLabelText("Relationship to the patient");
+    await waitFor(() => expect(rel).toHaveValue("Daughter")); // form filled from the loaded person
     await user.clear(rel);
     await user.type(rel, "Eldest daughter");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
