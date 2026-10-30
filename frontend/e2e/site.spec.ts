@@ -68,7 +68,7 @@ test("mobile menu works by touch and keyboard", async ({ page }) => {
   await expect(toggle).toBeFocused();
 });
 
-test("demo switches scenarios and never guesses a name", async ({ page }) => {
+test("interactive demo: full walkthrough, no camera, no backend", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const camera: string[] = [];
   await page.exposeFunction("__cameraUsed", () => camera.push("used"));
@@ -82,21 +82,68 @@ test("demo switches scenarios and never guesses a name", async ({ page }) => {
   await page.goto("/welcome");
   await page.getByRole("link", { name: /Explore the demo/ }).click();
   const demo = page.locator("section", { has: page.locator("#demo") });
+  const preview = demo.locator("figure");
+  const next = demo.getByRole("button", { name: /^Next/ });
   await expect(demo.getByText("Simulation / Demo mode")).toBeVisible();
-  await expect(demo.getByText("This is Daniel Hughes")).toBeVisible();
 
-  await demo.getByRole("radio", { name: "Someone new" }).click();
-  await expect(demo.getByText("I don't recognise this person")).toBeVisible();
-  await expect(demo.getByText("Daniel Hughes")).toHaveCount(0);
-  await demo.screenshot({ path: "test-results/site-demo-unknown.png" });
+  // A: known visitor, through to memories.
+  await next.click();
+  await next.click();
+  await next.click();
+  await expect(preview.getByText("This is Daniel Hughes")).toBeVisible();
+  await expect(preview.getByTestId("memory-card")).toBeVisible();
+  await demo.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/demo-1440-known.png", fullPage: false });
+  await demo.screenshot({ path: "test-results/demo-1440-known-section.png" });
 
-  await demo.getByRole("radio", { name: "Possible match" }).click();
-  await expect(demo.getByText("This might be Daniel")).toBeVisible();
-  await demo.screenshot({ path: "test-results/site-demo-uncertain.png" });
+  // D: different visitor replaces Daniel with Ruth.
+  await demo.getByRole("radio", { name: /Different visitor/ }).click();
+  await next.click();
+  await expect(preview).not.toContainText("Daniel");
+  await next.click();
+  await next.click();
+  await expect(preview.getByText("This is Ruth Hughes")).toBeVisible();
+  await demo.screenshot({ path: "test-results/demo-1440-ruth-section.png" });
+
+  // E: uncertain never confirms.
+  await demo.getByRole("radio", { name: /Uncertain recognition/ }).click();
+  await next.click();
+  await expect(preview.getByText("This might be Daniel")).toBeVisible();
+  await expect(preview.getByTestId("memory-card")).toHaveCount(0);
+  await demo.screenshot({ path: "test-results/demo-1440-uncertain-section.png" });
+
+  // Keyboard: scenario radios respond to arrow keys.
+  await demo.getByRole("radio", { name: /Uncertain recognition/ }).focus();
+  await page.keyboard.press("Home");
+  await expect(demo.getByRole("radio", { name: /Known visitor/ })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(demo.getByRole("radio", { name: /Unknown visitor/ })).toHaveAttribute("aria-checked", "true");
+
+  // Restart.
+  await demo.getByRole("button", { name: "Restart demo" }).click();
+  await expect(demo.getByText("Scenario A · step 1 of 4")).toBeVisible();
 
   expect(camera, "the public demo must not open the camera").toEqual([]);
   expect(apiCalls, "the public demo must not call the backend").toEqual([]);
 });
+
+for (const vp of [{ name: "768", width: 768, height: 1024 }, { name: "375", width: 375, height: 812 }]) {
+  test(`interactive demo fits and works at ${vp.name}px`, async ({ page }) => {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await page.goto("/welcome#demo");
+    const demo = page.locator("section", { has: page.locator("#demo") });
+    await page.evaluate(() => document.querySelectorAll(".site-reveal").forEach((el) => el.setAttribute("data-visible", "true")));
+    await page.waitForTimeout(700); // let the entrance fade finish before the screenshot
+    const next = demo.getByRole("button", { name: /^Next/ });
+    await next.click();
+    await next.click();
+    await expect(demo.locator("figure").getByTestId("memory-card")).toBeVisible();
+    await page.waitForTimeout(450);
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    expect(await runAxe(page)).toEqual([]);
+    await demo.screenshot({ path: `test-results/demo-${vp.name}-section.png` });
+  });
+}
 
 test("caregiver login link opens the real sign-in page", async ({ page }) => {
   await mockBackend(page, { caregiver: false });
