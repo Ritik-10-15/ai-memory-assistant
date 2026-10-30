@@ -164,6 +164,13 @@ def load_known_faces():
         print("⚠️  No usable faces — add people via caregiver panel")
 
 
+def display_name(pid):
+    """The enrolled person's current name. Always read through here: every
+    gallery reload replaces _name_map, so a reference imported earlier
+    would go stale."""
+    return _name_map.get(pid)
+
+
 def models_loaded():
     return _detector is not None and _recognizer is not None
 
