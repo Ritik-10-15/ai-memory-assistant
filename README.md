@@ -473,11 +473,36 @@ npm test                            # Vitest + React Testing Library + axe
 npm run build && npm run test:e2e   # Playwright: desktop, tablet, mobile
 ```
 
+**With the real face models** (local; needs `python scripts/download_models.py`
+and a photo of one consenting person facing the camera):
+
+```bash
+MEMORY_ASSISTANT_FACE_IMAGE=face.jpg pytest tests/test_recognition_real.py
+
+cd frontend && npm run build
+LIVE_FACE_IMAGE=../face.jpg LIVE_PYTHON=../venv/bin/python   npx playwright test -c playwright.live.config.ts   # the 12 user journeys, real backend
+
+python scripts/measure_performance.py face.jpg          # timings on this machine
+```
+
+The live journeys start their own server on a fresh temporary data folder
+and refuse to attach to a running one, so they never touch real records.
+The repository ships no face photos, so CI skips these.
+
 The frontend tests cover every recognition state, switching visitors, clearing
 stale identities, outages, read-aloud controls, caregiver sign-in and session
 expiry, destructive-action confirmation, enrollment errors, keyboard access,
 layouts without horizontal scrolling, and WCAG 2.2 AA scans (including colour
-contrast) in a real browser. GitHub Actions runs all of it on every push.
+contrast) in a real browser. GitHub Actions runs all of it on every push,
+plus a pyflakes-level lint (`ruff --select F`) and a compile check.
+
+The Phase 6 audit (integration, recognition reliability, security, performance
+measurements and the defects it fixed) is in
+[docs/phase6-integration-report.md](docs/phase6-integration-report.md).
+
+**Sessions.** The patient device keeps its PIN sign-in for a year. A caregiver
+sign-in ends when the browser closes and, on the server, after 12 hours;
+signing out keeps the patient device signed in.
 
 ---
 
