@@ -340,6 +340,25 @@ def api_add_memory():
     return jsonify(_memory_json(row)), 201
 
 
+@app.route("/api/caregiver/memories/<int:mem_id>", methods=["PUT"])
+@caregiver_required
+def api_update_memory(mem_id):
+    """Edit a memory's summary (the text the patient sees and hears).
+    Only `summary` changes — the original voice-memo transcript, source,
+    person and timestamp are kept as recorded."""
+    data = request.get_json(silent=True) or {}
+    summary = (data.get("summary") or "").strip()[:MAX_TEXT]
+    if not summary:
+        return _error("Please write the memory first.", 400)
+    with get_db() as c:
+        cur = c.execute("UPDATE memories SET summary=? WHERE id=?", (summary, mem_id))
+        if cur.rowcount == 0:
+            return _error("Memory not found.", 404)
+        row = c.execute("SELECT m.*, p.name AS person_name FROM memories m "
+                        "JOIN people p ON p.id=m.person_id WHERE m.id=?", (mem_id,)).fetchone()
+    return jsonify(_memory_json(row))
+
+
 @app.route("/api/caregiver/memories/<int:mem_id>", methods=["DELETE"])
 @caregiver_required
 def api_delete_memory(mem_id):

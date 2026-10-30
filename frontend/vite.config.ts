@@ -7,7 +7,8 @@ import { fileURLToPath, URL } from "node:url";
 // the session cookie and relative URLs behave exactly as in production, where
 // Flask serves this build itself.
 const backend = "http://127.0.0.1:5000";
-const proxied = ["/api", "/video", "/caregiver/enroll", "/caregiver/export"];
+// Only the enrollment capture endpoint — /caregiver/enroll pages are SPA routes.
+const proxied = ["/api", "/video", "^/caregiver/enroll/[^/]+/capture", "/caregiver/export"];
 
 export default defineConfig({
   plugins: [react()],

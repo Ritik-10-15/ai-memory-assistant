@@ -1,24 +1,21 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { MessageSquareText, Search, Trash2 } from "lucide-react";
+import { MessageSquareText, Search } from "lucide-react";
 import { api } from "@/api/client";
 import type { Memory } from "@/api/types";
 import {
   Alert,
-  Badge,
   Button,
   Card,
   CardBody,
   CardHeader,
-  ConfirmDialog,
   EmptyState,
   ErrorState,
   Skeleton,
   TextAreaField,
 } from "@/components/ui";
 import { useAsync } from "@/hooks/useAsync";
-import { formatDateTime, parseServerTime } from "@/lib/format";
-import { PageHeader, sourceLabel } from "../components";
+import { PageHeader } from "../components";
+import { MemoryTimeline } from "../MemoryCard";
 
 export function MemoryComposer({ personId, onAdded }: { personId: string; onAdded: (m: Memory) => void }) {
   const [text, setText] = useState("");
@@ -71,93 +68,6 @@ export function MemoryComposer({ personId, onAdded }: { personId: string; onAdde
         )}
       </div>
     </form>
-  );
-}
-
-export function MemoryList({
-  memories,
-  showPerson,
-  onDeleted,
-}: {
-  memories: Memory[];
-  showPerson: boolean;
-  onDeleted: (id: number) => void;
-}) {
-  const [toDelete, setToDelete] = useState<Memory | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function confirm() {
-    if (!toDelete) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.deleteMemory(toDelete.id);
-      onDeleted(toDelete.id);
-      setToDelete(null);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!memories.length) {
-    return <p className="text-[15px] text-ink-muted">No memories saved yet.</p>;
-  }
-
-  return (
-    <>
-      <ul className="space-y-3">
-        {memories.map((m) => (
-          <li key={m.id} className="rounded-xl border border-line bg-card p-4">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
-              {showPerson && (
-                <Link to={`/caregiver/people/${m.person_id}/edit`} className="font-semibold text-ink hover:underline">
-                  {m.person_name}
-                </Link>
-              )}
-              <time dateTime={parseServerTime(m.created_at)?.toISOString()}>{formatDateTime(m.created_at)}</time>
-              <Badge tone={m.source === "whisper" ? "info" : "neutral"}>{sourceLabel(m.source)}</Badge>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto text-danger-700 hover:bg-danger-50"
-                icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-                onClick={() => setToDelete(m)}
-              >
-                Delete<span className="sr-only"> memory from {formatDateTime(m.created_at)}</span>
-              </Button>
-            </div>
-            <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink">{m.summary}</p>
-            {m.raw_transcript && m.raw_transcript !== m.summary && (
-              <details className="mt-2 text-sm">
-                <summary className="cursor-pointer font-medium text-primary-700">Full transcript</summary>
-                <p className="mt-1 whitespace-pre-line text-ink-muted">{m.raw_transcript}</p>
-              </details>
-            )}
-          </li>
-        ))}
-      </ul>
-      <ConfirmDialog
-        open={toDelete !== null}
-        title="Delete this memory?"
-        description={
-          <>
-            <span className="block">“{toDelete?.summary.slice(0, 160)}{(toDelete?.summary.length ?? 0) > 160 ? "…" : ""}”</span>
-            <span className="mt-2 block">It will no longer be shown to the patient. This can't be undone.</span>
-          </>
-        }
-        confirmLabel="Delete memory"
-        busy={busy}
-        error={error}
-        onConfirm={confirm}
-        onCancel={() => {
-          setToDelete(null);
-          setError(null);
-        }}
-      />
-    </>
   );
 }
 
@@ -243,9 +153,10 @@ export function MemoriesPage() {
                 Showing {filtered.length} of {memories.data.length} memories
               </p>
               {filtered.length ? (
-                <MemoryList
+                <MemoryTimeline
                   memories={filtered}
                   showPerson
+                  onUpdated={(m) => memories.setData((prev) => (prev ?? []).map((x) => (x.id === m.id ? m : x)))}
                   onDeleted={(id) => memories.setData((prev) => (prev ?? []).filter((m) => m.id !== id))}
                 />
               ) : (

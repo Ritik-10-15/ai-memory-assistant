@@ -98,9 +98,11 @@ describe("people management", () => {
     const user = userEvent.setup();
     renderAt("/caregiver/people");
     expect(await screen.findByRole("heading", { name: "Sarah Johnson" })).toBeInTheDocument();
-    expect(screen.getByText("Face enrolled")).toBeInTheDocument();
-    expect(screen.getByText("No face photos")).toBeInTheDocument();
-    await user.type(screen.getByRole("searchbox", { name: "Search people" }), "neigh");
+    const sarahCard = screen.getByRole("heading", { name: "Sarah Johnson" }).closest("article")!;
+    expect(within(sarahCard).getByText("Face enrolled")).toBeInTheDocument();
+    const johnCard = screen.getByRole("heading", { name: "John Smith" }).closest("article")!;
+    expect(within(johnCard).getByText("No face photos")).toBeInTheDocument();
+    await user.type(screen.getByRole("searchbox", { name: "Search" }), "neigh");
     expect(screen.queryByRole("heading", { name: "Sarah Johnson" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "John Smith" })).toBeInTheDocument();
   });
@@ -288,7 +290,7 @@ describe("family photos", () => {
     vi.spyOn(api, "photos").mockResolvedValue([beachPhoto]);
     const setProfile = vi.spyOn(api, "setProfilePhoto").mockResolvedValue({ ok: true });
     const user = userEvent.setup();
-    renderAt(`/caregiver/people/${sarah.id}/edit`);
+    renderAt(`/caregiver/people/${sarah.id}`);
     const choice = await screen.findByRole("button", { name: "Whitby beach" });
     expect(choice).toHaveAttribute("aria-pressed", "false");
     await user.click(choice);

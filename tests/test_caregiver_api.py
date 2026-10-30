@@ -242,3 +242,21 @@ def test_person_data_reports_previous_completed_visit(sample_person):
                   "(?, '2026-02-01 09:00:00')", (sample_person,))
     data = worker._get_person_data(sample_person)
     assert data["last_visit_at"] == "2026-01-01 10:00:00"
+
+
+def test_memory_summary_can_be_edited_without_touching_the_transcript(caregiver, sample_person):
+    with database.get_db() as c:
+        cur = c.execute("INSERT INTO memories (person_id, summary, raw_transcript, source) VALUES (?,?,?,?)",
+                        (sample_person, "Old summary", "the original words", "whisper"))
+        mid = cur.lastrowid
+    resp = caregiver.put(f"/api/caregiver/memories/{mid}", json={"summary": "  You planned the garden.  "})
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["summary"] == "You planned the garden."
+    assert body["raw_transcript"] == "the original words" and body["source"] == "whisper"
+    assert caregiver.put(f"/api/caregiver/memories/{mid}", json={"summary": " "}).status_code == 400
+    assert caregiver.put("/api/caregiver/memories/99999", json={"summary": "x"}).status_code == 404
+
+
+def test_memory_edit_requires_caregiver(client, sample_person):
+    assert client.put("/api/caregiver/memories/1", json={"summary": "x"}).status_code == 401

@@ -133,6 +133,7 @@ export const api = {
     ),
   addMemory: (personId: string, summary: string) =>
     request<Memory>("POST", "/api/caregiver/memories", { person_id: personId, summary }),
+  updateMemory: (id: number, summary: string) => request<Memory>("PUT", `/api/caregiver/memories/${id}`, { summary }),
   deleteMemory: (id: number) => request<{ ok: true }>("DELETE", `/api/caregiver/memories/${id}`),
 
   visits: (limit = 200) => request<Visit[]>("GET", `/api/caregiver/visits?limit=${limit}`),

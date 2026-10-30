@@ -11,10 +11,45 @@ import { PageHeader, StatTile } from "../components";
 // Single-series charts: one validated mark color (primary-600, 4.7:1 on the
 // white card), recessive grid/axes in muted ink, no legend (the title names
 // the series), hover tooltip, and a table view for every chart.
-const MARK = "#2C6F6C";
-const AXIS = "#675E56";
-const GRID = "#EDE5DA";
+const MARK = "#285744"; // forest
+const AXIS = "#5C6E65";
+const GRID = "#DDE9D9";
 const RANGES = [7, 30, 90] as const;
+
+export interface VisitFilters {
+  person: string; // "" = everyone
+  query: string; // matches name or relationship
+  range: number | "custom"; // days back (0 = all time) or a custom from/to
+  from: string; // YYYY-MM-DD, local day (custom only)
+  to: string;
+  sort: "newest" | "oldest";
+}
+
+const dayStart = (d: string) => new Date(`${d}T00:00:00`).getTime();
+const dayEnd = (d: string) => new Date(`${d}T23:59:59.999`).getTime();
+
+/** Filter and sort visits on the client — the data comes from /api/caregiver/visits. */
+export function filterVisits(visits: Visit[], f: VisitFilters, now = Date.now()): Visit[] {
+  const q = f.query.trim().toLowerCase();
+  let lo = -Infinity;
+  let hi = Infinity;
+  if (f.range === "custom") {
+    if (f.from) lo = dayStart(f.from);
+    if (f.to) hi = dayEnd(f.to);
+  } else if (f.range > 0) {
+    lo = now - f.range * 86_400_000;
+  }
+  const t = (v: Visit) => parseServerTime(v.started_at)?.getTime() ?? 0;
+  return visits
+    .filter(
+      (v) =>
+        (!f.person || v.person_id === f.person) &&
+        (!q || v.person_name.toLowerCase().includes(q) || v.relationship.toLowerCase().includes(q)) &&
+        t(v) >= lo &&
+        t(v) <= hi,
+    )
+    .sort((a, b) => (f.sort === "oldest" ? t(a) - t(b) : t(b) - t(a)));
+}
 
 /** Fill in missing days so the chart shows quiet days as zero, not gaps. */
 export function lastNDays(daily: Analytics["daily"], days = 30, now = new Date()) {
@@ -107,8 +142,8 @@ function groupByDay(visits: Visit[]) {
 export function VisitsPage() {
   const visits = useAsync(() => api.visits(1000), []);
   const analytics = useAsync(() => api.analytics(), []);
-  const [person, setPerson] = useState("");
-  const [range, setRange] = useState<(typeof RANGES)[number] | 0>(30);
+  const [filters, setFilters] = useState<VisitFilters>({ person: "", query: "", range: 30, from: "", to: "", sort: "newest" });
+  const setF = (patch: Partial<VisitFilters>) => setFilters((f) => ({ ...f, ...patch }));
 
   const people = useMemo(() => {
     const seen = new Map<string, string>();
@@ -116,18 +151,14 @@ export function VisitsPage() {
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [visits.data]);
 
-  const filtered = useMemo(() => {
-    const cutoff = range ? Date.now() - range * 86_400_000 : 0;
-    return (visits.data ?? []).filter(
-      (v) => (!person || v.person_id === person) && (parseServerTime(v.started_at)?.getTime() ?? 0) >= cutoff,
-    );
-  }, [visits.data, person, range]);
+  const filtered = useMemo(() => filterVisits(visits.data ?? [], filters), [visits.data, filters]);
+  const badRange = filters.range === "custom" && filters.from && filters.to && filters.from > filters.to;
 
   const totalDuration = filtered.reduce((s, v) => s + (v.duration_s || 0), 0);
   const withDuration = filtered.filter((v) => v.duration_s > 0).length;
   const daily = analytics.data ? lastNDays(analytics.data.daily) : [];
   const perPerson = (analytics.data?.per_person ?? []).filter((p) => p.visits > 0).slice(0, 8);
-  const control = "block w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-[15px] text-ink";
+  const control = "block w-full rounded-2xl border border-line-strong bg-card px-3.5 py-2.5 text-[15px] text-ink";
 
   return (
     <>
@@ -160,7 +191,7 @@ export function VisitsPage() {
                       <CartesianGrid stroke={GRID} vertical={false} />
                       <XAxis dataKey="label" tick={{ fill: AXIS, fontSize: 12 }} tickLine={false} axisLine={{ stroke: GRID }} interval={6} />
                       <YAxis allowDecimals={false} tick={{ fill: AXIS, fontSize: 12 }} tickLine={false} axisLine={false} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(44,111,108,0.08)" }} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(40,87,68,0.08)" }} />
                       <Bar dataKey="visits" fill={MARK} radius={[4, 4, 0, 0]} maxBarSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -184,7 +215,7 @@ export function VisitsPage() {
                       <CartesianGrid stroke={GRID} horizontal={false} />
                       <XAxis type="number" allowDecimals={false} tick={{ fill: AXIS, fontSize: 12 }} tickLine={false} axisLine={false} />
                       <YAxis type="category" dataKey="name" width={110} tick={{ fill: AXIS, fontSize: 13 }} tickLine={false} axisLine={false} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(44,111,108,0.08)" }} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(40,87,68,0.08)" }} />
                       <Bar dataKey="visits" fill={MARK} radius={[0, 4, 4, 0]} maxBarSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -207,12 +238,25 @@ export function VisitsPage() {
         <h2 id="timeline-heading" className="mb-4 text-lg font-semibold text-ink">
           Timeline
         </h2>
-        <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+        <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label htmlFor="visit-search" className="mb-1.5 block text-sm font-semibold text-ink">
+              Search
+            </label>
+            <input
+              id="visit-search"
+              type="search"
+              className={control}
+              placeholder="Name or relationship"
+              value={filters.query}
+              onChange={(e) => setF({ query: e.target.value })}
+            />
+          </div>
           <div>
             <label htmlFor="visit-person" className="mb-1.5 block text-sm font-semibold text-ink">
               Visitor
             </label>
-            <select id="visit-person" className={control} value={person} onChange={(e) => setPerson(e.target.value)}>
+            <select id="visit-person" className={control} value={filters.person} onChange={(e) => setF({ person: e.target.value })}>
               <option value="">Everyone</option>
               {people.map(([id, name]) => (
                 <option key={id} value={id}>
@@ -225,15 +269,59 @@ export function VisitsPage() {
             <label htmlFor="visit-range" className="mb-1.5 block text-sm font-semibold text-ink">
               Period
             </label>
-            <select id="visit-range" className={control} value={range} onChange={(e) => setRange(Number(e.target.value) as typeof range)}>
+            <select
+              id="visit-range"
+              className={control}
+              value={String(filters.range)}
+              onChange={(e) => setF({ range: e.target.value === "custom" ? "custom" : Number(e.target.value) })}
+            >
               {RANGES.map((r) => (
                 <option key={r} value={r}>
                   Last {r} days
                 </option>
               ))}
               <option value={0}>All time</option>
+              <option value="custom">Custom dates…</option>
             </select>
           </div>
+          <div>
+            <label htmlFor="visit-sort" className="mb-1.5 block text-sm font-semibold text-ink">
+              Order
+            </label>
+            <select id="visit-sort" className={control} value={filters.sort} onChange={(e) => setF({ sort: e.target.value as VisitFilters["sort"] })}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+          {filters.range === "custom" && (
+            <>
+              <div>
+                <label htmlFor="visit-from" className="mb-1.5 block text-sm font-semibold text-ink">
+                  From
+                </label>
+                <input id="visit-from" type="date" className={control} value={filters.from} onChange={(e) => setF({ from: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="visit-to" className="mb-1.5 block text-sm font-semibold text-ink">
+                  To
+                </label>
+                <input
+                  id="visit-to"
+                  type="date"
+                  className={control}
+                  value={filters.to}
+                  onChange={(e) => setF({ to: e.target.value })}
+                  aria-invalid={badRange ? true : undefined}
+                  aria-describedby={badRange ? "visit-range-error" : undefined}
+                />
+              </div>
+              {badRange && (
+                <p id="visit-range-error" className="self-end pb-2.5 text-sm font-medium text-danger-700 sm:col-span-2">
+                  The "To" date is before the "From" date.
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         {visits.error ? (
@@ -286,7 +374,7 @@ export function VisitsPage() {
                   title={visits.data?.length ? "No visits match these filters" : "No visits recorded yet"}
                   description={
                     visits.data?.length
-                      ? `Try a longer period${person ? " or everyone" : ""}.`
+                      ? "Try a different search, visitor or period."
                       : "Visits are logged automatically when an enrolled person is recognised."
                   }
                 />
