@@ -1,39 +1,22 @@
 import type { Config } from "tailwindcss";
 
+import plugin from "tailwindcss/plugin";
+import { album, companion, cssVars, tailwindColors } from "./theme.tokens.cjs";
+
 /**
- * "Family album" design tokens — warm paper, sage, soft teal, warm blue and
- * a terracotta highlight. Every text/background pair used in the app was
- * checked against WCAG 2.2 AA (4.5:1 text, 3:1 UI/icons); see README.
- *
- * Roles:
- *   primary  soft teal — main actions, links, focus
- *   sage     recognised / success / calm confirmation
- *   sky      warm blue — informational accents
- *   clay     terracotta — warm highlights (featured memory, emphasis)
- *   caution  "not sure" states
- *   danger   destructive actions and errors
+ * Design tokens. The core palette (paper, card, ink, line, primary, sage,
+ * sky, clay) is themeable through CSS variables — see theme.tokens.cjs:
+ *   album      default            → caregiver workspace
+ *   companion  .theme-companion   → patient app (mint / forest / plum)
+ * Roles: primary = main actions, links, focus; sage = recognised/success;
+ * sky = info; clay = warm highlight; caution = "not sure"; danger = errors.
  */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        paper: "#FBF6EE",
-        card: "#FFFDF9",
-        ink: { DEFAULT: "#2E2A26", muted: "#675E56" },
-        line: { DEFAULT: "#E8DED1", strong: "#8F8174" },
-        primary: {
-          50: "#E9F2F0",
-          100: "#D3E6E2",
-          200: "#AFD0CA",
-          600: "#2C6F6C",
-          700: "#23605E",
-          800: "#1B4D4B",
-          900: "#143A39",
-        },
-        sage: { 50: "#EDF3EB", 100: "#D9E6D5", 200: "#B9CFB4", 600: "#5A7A5E", 700: "#46634A" },
-        sky: { 50: "#EBF1F6", 100: "#D4E1EC", 600: "#3D6788", 700: "#2F5675" },
-        clay: { 50: "#FBEEE7", 100: "#F4D9CC", 200: "#EBBDA8", 600: "#A84E2E", 700: "#963F22" },
+        ...tailwindColors(),
         caution: { 50: "#FFF4DE", 100: "#F7E3B8", 600: "#A86F0C", 700: "#835400" },
         danger: { 50: "#FBEBE8", 100: "#F3D0CA", 600: "#B13B2D", 700: "#93301F" },
 
@@ -48,8 +31,9 @@ export default {
         cream: "#FFFCF6",
       },
       fontFamily: {
-        sans: ['"Nunito Sans Variable"', '"Nunito Sans"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
-        serif: ['"Fraunces Variable"', "Fraunces", "Georgia", "serif"],
+        // Themeable: album = Nunito Sans + Fraunces, companion = Inter + DM Serif Display.
+        sans: ["var(--font-sans)"],
+        serif: ["var(--font-serif)"],
         display: ['"DM Serif Display"', "Georgia", "serif"],
         body: ['"Inter Variable"', "Inter", "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
       },
@@ -63,5 +47,20 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(({ addBase }) => {
+      addBase({
+        ":root": {
+          ...cssVars(album),
+          "--font-sans": '"Nunito Sans Variable", "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif',
+          "--font-serif": '"Fraunces Variable", Fraunces, Georgia, serif',
+        },
+        ".theme-companion": {
+          ...cssVars(companion),
+          "--font-sans": '"Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif',
+          "--font-serif": '"DM Serif Display", Georgia, serif',
+        },
+      });
+    }),
+  ],
 } satisfies Config;

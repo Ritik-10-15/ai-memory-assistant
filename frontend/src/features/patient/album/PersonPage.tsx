@@ -9,7 +9,7 @@ import { usePageTitle } from "../usePageTitle";
 import type { Speech } from "../useSpeech";
 import { relationshipPhrase } from "../VisitorPanel";
 import { LookTogether } from "./LookTogether";
-import { PatientMessage } from "./PatientMessage";
+import { PatientEmptyState } from "./PatientEmptyState";
 import { AlbumCard, ListenButton, PersonPhoto, buildAlbum } from "./pieces";
 
 /** One loved one: their photo, who they are, when they last visited, and shared memories. */
@@ -32,7 +32,7 @@ export function PersonPage({ speech }: { speech: Speech }) {
     return (
       <div>
         {back}
-        <PatientMessage
+        <PatientEmptyState
           title={missing ? "I couldn't find this person" : "I couldn't open this page just now"}
           action={
             missing ? (
@@ -68,13 +68,17 @@ export function PersonPage({ speech }: { speech: Speech }) {
         <PersonPhoto id={person.id} name={person.name} className="mx-auto w-full max-w-xs" />
         <div>
           <h1 className="text-4xl font-semibold leading-tight text-ink sm:text-5xl">{person.name}</h1>
-          {relation && <p className="mt-2 text-2xl text-primary-700">{relation}</p>}
+          {relation && <p className="mt-2 text-2xl text-sage-700">{relation}</p>}
           {person.description && <p className="mt-4 text-xl leading-relaxed text-ink">{person.description}</p>}
           {lastVisit && (
             <p className="mt-4 text-lg text-ink-muted">
               {first} last visited {lastVisit}.
             </p>
           )}
+          <p className="mt-4 rounded-2xl bg-paper px-4 py-3 text-base text-ink-muted">
+            You're looking through {first}'s album. This doesn't mean {first} is here — the home screen shows who is
+            visiting.
+          </p>
           <div className="mt-6">
             <ListenButton speech={speech} id={`person:${person.id}`} text={intro} label={`Hear about ${first}`} />
           </div>

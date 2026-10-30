@@ -5,7 +5,7 @@ import { Button } from "@/components/ui";
 import { useAsync } from "@/hooks/useAsync";
 import { usePageTitle } from "../usePageTitle";
 import { PersonPhoto } from "./pieces";
-import { PatientMessage } from "./PatientMessage";
+import { PatientEmptyState } from "./PatientEmptyState";
 
 /** Family & friends: an album of the people in the patient's life. */
 export function FamilyPage() {
@@ -19,7 +19,7 @@ export function FamilyPage() {
 
       <div className="mt-8">
         {family.error ? (
-          <PatientMessage
+          <PatientEmptyState
             title="I couldn't open the family album just now"
             action={
               <Button size="xl" variant="secondary" icon={<RefreshCw className="h-6 w-6" aria-hidden="true" />} onClick={family.reload}>
@@ -34,7 +34,7 @@ export function FamilyPage() {
             ))}
           </ul>
         ) : !family.data.length ? (
-          <PatientMessage
+          <PatientEmptyState
             icon={<Users className="h-10 w-10" aria-hidden="true" />}
             title="No one has been added yet"
             text="A caregiver can add family and friends, with their photos."
@@ -52,7 +52,7 @@ export function FamilyPage() {
                     <h2 className="text-2xl font-semibold leading-snug text-ink group-hover:underline group-hover:decoration-2 group-hover:underline-offset-4">
                       {p.name}
                     </h2>
-                    {p.relationship && <p className="mt-0.5 text-xl text-primary-700">{p.relationship}</p>}
+                    {p.relationship && <p className="mt-0.5 text-xl text-sage-700">{p.relationship}</p>}
                     {p.description && <p className="mt-3 line-clamp-2 text-lg text-ink">{p.description}</p>}
                     {p.recent_memory && (
                       <p className="mt-3 line-clamp-2 border-t border-line pt-3 text-lg text-ink-muted">

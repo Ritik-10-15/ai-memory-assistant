@@ -6,9 +6,9 @@ import type { CameraStatus } from "./useBrowserCamera";
 import type { PatientView } from "./recognitionView";
 
 const BOX_COLORS: Record<string, string> = {
-  known: "#2C6F6C",
+  known: "#285744", // forest — matches the companion theme
   uncertain: "#A86F0C",
-  unknown: "#675E56",
+  unknown: "#5C6E65",
 };
 
 function boxLabel(view: PatientView): string {
@@ -37,7 +37,7 @@ function drawOverlay(paper: HTMLCanvasElement, frame: FrameResult | null, view: 
   const [bx, by, bw, bh] = frame.box;
   const x = bx * scale + ox;
   const y = by * scale + oy;
-  const color = BOX_COLORS[view.kind] ?? "#A89B8E";
+  const color = BOX_COLORS[view.kind] ?? "#7C8E84";
 
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
@@ -47,7 +47,7 @@ function drawOverlay(paper: HTMLCanvasElement, frame: FrameResult | null, view: 
 
   const label = boxLabel(view);
   if (label) {
-    ctx.font = '600 16px "Nunito Sans Variable", "Nunito Sans", system-ui, sans-serif';
+    ctx.font = '600 16px "Inter Variable", Inter, system-ui, sans-serif';
     const tw = ctx.measureText(label).width;
     const ly = Math.max(0, y - 32);
     ctx.fillStyle = color;

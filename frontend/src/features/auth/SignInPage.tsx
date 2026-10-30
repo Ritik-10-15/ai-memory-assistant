@@ -9,9 +9,20 @@ const QUERY_ERRORS: Record<string, string> = {
   locked: "Too many attempts. Please wait a few minutes and try again.",
 };
 
-function Shell({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function Shell({
+  title,
+  description,
+  children,
+  companion = false,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  /** Patient pages use the companion (mint/plum) theme. */
+  companion?: boolean;
+}) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
+    <main className={`flex min-h-screen items-center justify-center bg-paper px-4 py-10 font-sans text-ink ${companion ? "theme-companion" : ""}`}>
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-700 text-white">
@@ -101,6 +112,7 @@ export function PatientSignIn() {
 
   return (
     <Shell
+      companion
       title="Set up this screen"
       description="Enter the patient PIN once. This device will stay signed in."
     >
