@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import type { Page, Route } from "@playwright/test";
-import type { Album, AppStatus, CurrentPerson, FamilyMember, Person } from "../src/api/types";
+import type { Album, AlbumSummary, AppStatus, CaregiverAlbum, CurrentPerson, FamilyMember, FamilyPhoto, Person } from "../src/api/types";
 import { idle, john, maybeSarah, photoExtras, sarah, unknownFace } from "../src/test/fixtures";
 
 export { idle, john, maybeSarah, sarah, unknownFace };
@@ -111,7 +111,11 @@ export async function mockBackend(
           memory_sources: [{ source: "manual", count: 2 }],
         });
       case "GET /api/caregiver/photos":
-        return json(route, album.photos);
+        return json(route, albumPhotos);
+      case "GET /api/albums":
+        return json(route, [albumSummary, emptyAlbum]);
+      case "GET /api/caregiver/albums":
+        return json(route, [careAlbum, { ...emptyAlbum, cover_chosen: false, visible_to_patient: false, created_at: "2026-10-28 10:00:00" }]);
       case "GET /api/album":
         return json(route, album);
       case "GET /api/family":
@@ -140,6 +144,19 @@ export async function mockBackend(
         if (url.pathname.startsWith("/api/caregiver/memories/")) {
           if (method === "PUT") return json(route, { ...memory, summary: route.request().postDataJSON()?.summary ?? memory.summary });
           if (method === "DELETE") return json(route, { ok: true });
+        }
+        if (url.pathname.startsWith("/api/albums/")) {
+          if (!url.pathname.endsWith(ALBUM_ID)) return json(route, { error: "Album not found." }, 404);
+          return json(route, { album: albumSummary, photos: albumPhotos, total: albumPhotos.length, limit: 60, offset: 0 });
+        }
+        if (url.pathname.startsWith("/api/caregiver/albums/")) {
+          if (!url.pathname.includes(ALBUM_ID)) return json(route, { error: "Album not found." }, 404);
+          if (method === "DELETE" && url.pathname.endsWith(ALBUM_ID)) return json(route, { ok: true, deleted_photos: 0 });
+          if (url.pathname.endsWith("/order")) {
+            const ids: string[] = route.request().postDataJSON().photo_ids;
+            return json(route, { album: careAlbum, photos: ids.map((id) => albumPhotos.find((x) => x.id === id)) });
+          }
+          return json(route, { album: careAlbum, photos: albumPhotos });
         }
         if (url.pathname.startsWith("/api/photos/")) {
           const img = IMAGES[url.pathname.split("/")[3]];
@@ -199,3 +216,40 @@ export const album: Album = {
     { id: "l".repeat(32), caption: "Sunday lunch", story: "Roast dinner at the big table, with everyone home for the weekend.", taken_on: "Christmas 2019", memory_id: null, created_at: "2026-09-12 12:00:00", people: [], ...photoExtras },
   ],
 };
+
+// ── Photo albums (Phase 5) ──────────────────────────────────────────
+export const ALBUM_ID = "a1".repeat(16);
+const relationships = { [sarah.person_id!]: "Daughter", [john.person_id!]: "Neighbour" };
+export const albumPhotos: FamilyPhoto[] = [
+  {
+    ...album.photos[0],
+    location: "Whitby",
+    category: "holiday",
+    people: [
+      { id: sarah.person_id!, name: "Sarah Johnson", relationship: relationships[sarah.person_id!] },
+      { id: john.person_id!, name: "John Smith", relationship: relationships[john.person_id!] },
+    ],
+    memory: { id: 5, summary: "You talked about the boats in the harbour.", person_name: "Sarah Johnson", created_at: "2026-10-20 15:00:00" },
+    memory_id: 5,
+    albums: [{ id: ALBUM_ID, title: "Whitby summers" }],
+  },
+  { ...album.photos[1], memory_id: null, location: "Back garden", prompt: "Would you like to hear about the roses?", albums: [{ id: ALBUM_ID, title: "Whitby summers" }] },
+  { ...album.photos[2], category: "family", albums: [{ id: ALBUM_ID, title: "Whitby summers" }] },
+];
+export const albumSummary: AlbumSummary = {
+  id: ALBUM_ID,
+  title: "Whitby summers",
+  description: "Holidays by the sea, from the caravan years to the grandchildren's first visit.",
+  cover_photo_id: albumPhotos[0].id,
+  photo_count: albumPhotos.length,
+  updated_at: "2026-10-28 10:00:00",
+};
+const emptyAlbum: AlbumSummary = {
+  id: "e0".repeat(16),
+  title: "Christmas",
+  description: "",
+  cover_photo_id: null,
+  photo_count: 0,
+  updated_at: "2026-10-27 10:00:00",
+};
+const careAlbum: CaregiverAlbum = { ...albumSummary, cover_chosen: false, visible_to_patient: true, created_at: "2026-10-01 10:00:00" };

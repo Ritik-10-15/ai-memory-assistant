@@ -173,3 +173,23 @@ def test_a_database_from_before_family_photos_also_upgrades(tmp_path, monkeypatc
     assert migrations.current_version() == migrations.LATEST
     with database.get_db() as c:
         assert c.execute("SELECT name FROM people").fetchone()[0] == "Sarah"
+
+
+def test_demo_data_can_be_added_to_an_album_and_removed_again(client):
+    """scripts/seed_demo.py --remove with foreign keys enforced (its photos
+    illustrate its memories, and may have been put in an album)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("seed_demo", "scripts/seed_demo.py")
+    seed_demo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(seed_demo)
+    seed_demo.seed()
+    with database.get_db() as c:
+        photo = c.execute("SELECT id FROM photos WHERE memory_id IS NOT NULL").fetchone()["id"]
+        c.execute("INSERT INTO albums (id, title) VALUES ('d', 'Demo album')")
+        c.execute("INSERT INTO album_photos (album_id, photo_id) VALUES ('d', ?)", (photo,))
+    seed_demo.remove()
+    with database.get_db() as c:
+        assert c.execute("SELECT COUNT(*) FROM people").fetchone()[0] == 0
+        assert c.execute("SELECT COUNT(*) FROM photos").fetchone()[0] == 0
+        assert c.execute("SELECT COUNT(*) FROM album_photos").fetchone()[0] == 0
+    assert not list(config.PHOTOS_DIR.glob("*.jpg"))

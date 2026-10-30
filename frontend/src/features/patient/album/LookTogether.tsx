@@ -126,7 +126,9 @@ export function LookTogether({
             </Button>
           </div>
 
-          <div className="grid flex-1 gap-6 overflow-y-auto p-5 sm:p-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
+          {/* auto-rows-max: rows keep their content height and the area scrolls
+              (otherwise the photo's row is squeezed to nothing on phones). */}
+          <div className="grid flex-1 auto-rows-max gap-6 overflow-y-auto p-5 sm:p-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
             {item.photo ? (
               <FramedPhoto
                 src={api.photoUrl(item.photo.id)}
@@ -170,11 +172,17 @@ export function LookTogether({
           </div>
 
           {items.length > 1 && (
-            <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 sm:px-6">
-              <Button size="xl" variant="secondary" icon={<ChevronLeft className="h-7 w-7" aria-hidden="true" />} onClick={() => go(-1)}>
+            <div className="grid grid-cols-2 gap-3 border-t border-line px-4 py-3 sm:flex sm:justify-between sm:px-6">
+              <Button
+                size="xl"
+                variant="secondary"
+                className="w-full justify-center px-4 sm:w-auto"
+                icon={<ChevronLeft className="h-7 w-7" aria-hidden="true" />}
+                onClick={() => go(-1)}
+              >
                 Previous
               </Button>
-              <Button size="xl" onClick={() => go(1)}>
+              <Button size="xl" className="w-full justify-center px-4 sm:w-auto" onClick={() => go(1)}>
                 Next
                 <ChevronRight className="h-7 w-7" aria-hidden="true" />
               </Button>

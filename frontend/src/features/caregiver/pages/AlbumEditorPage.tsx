@@ -342,7 +342,7 @@ export function AlbumEditorPage() {
       )}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
-        <section aria-labelledby="album-photos-heading" className="order-2 space-y-4 xl:order-1">
+        <section aria-labelledby="album-photos-heading" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="album-photos-heading" className="font-serif text-3xl text-ink">
               Photos in this album
@@ -446,7 +446,7 @@ export function AlbumEditorPage() {
           )}
         </section>
 
-        <div className="order-1 space-y-6 xl:order-2">
+        <div className="space-y-6">
           <Card className="rounded-3xl">
             <CardHeader title="Upload photos" description="Each photo is checked on the server; location data is removed." />
             <CardBody>
