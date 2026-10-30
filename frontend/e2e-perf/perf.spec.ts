@@ -144,7 +144,7 @@ test("visitor recognition, end to end in the browser", async ({ browser }) => {
           (window as unknown as { __scene: string }).__scene = s as string;
           const t0 = performance.now();
           const check = () => {
-            const shown = Array.from(document.querySelectorAll("h1,h2")).some((h) => h.textContent?.includes("This is Visitor"));
+            const shown = Array.from(document.querySelectorAll("h1,h2,h3,h4")).some((h) => h.textContent?.includes("This is Visitor"));
             if (shown === want) resolve(performance.now() - t0);
             else requestAnimationFrame(check);
           };
@@ -232,7 +232,9 @@ const PAGES: PageCase[] = [
     who: "caregiver",
     ready: (p) => expect(p.getByRole("heading", { name: "Overview" })).toBeVisible(),
     interact: async (p) => {
-      await p.getByRole("link", { name: "Visit history" }).first().click();
+      // Keyboard, so the sticky mobile header cannot intercept the click.
+      await p.getByRole("link", { name: "Visit history" }).first().focus();
+      await p.keyboard.press("Enter");
       await expect(p.getByRole("heading", { name: "Visit history" })).toBeVisible();
     },
   },
@@ -313,6 +315,7 @@ for (const profile of [
 test("patient tablet soak: memory and listeners over time", async ({ browser }) => {
   test.skip(!process.env.PERF_SOAK_MIN, "set PERF_SOAK_MIN (minutes) to run the soak test");
   const minutes = Number(process.env.PERF_SOAK_MIN);
+  test.setTimeout(minutes * 60_000 + 180_000);
   const context = await browser.newContext();
   await fakeCamera(context);
   const page = await context.newPage();

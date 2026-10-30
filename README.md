@@ -482,7 +482,6 @@ MEMORY_ASSISTANT_FACE_IMAGE=face.jpg pytest tests/test_recognition_real.py
 cd frontend && npm run build
 LIVE_FACE_IMAGE=../face.jpg LIVE_PYTHON=../venv/bin/python   npx playwright test -c playwright.live.config.ts   # the 12 user journeys, real backend
 
-python scripts/measure_performance.py face.jpg          # timings on this machine
 ```
 
 The live journeys start their own server on a fresh temporary data folder
@@ -499,6 +498,26 @@ plus a pyflakes-level lint (`ruff --select F`) and a compile check.
 The Phase 6 audit (integration, recognition reliability, security, performance
 measurements and the defects it fixed) is in
 [docs/phase6-integration-report.md](docs/phase6-integration-report.md).
+
+### Performance benchmarks
+
+Every benchmark runs on a throwaway data folder with synthetic people,
+memories, visits and photos — never real records — and needs a photo of one
+consenting person (it is only read).
+
+```bash
+python scripts/benchmark.py face.jpg --label mine          # recognition, pipeline, API, SQLite → docs/benchmarks/mine.json
+python scripts/benchmark.py face.jpg --label mine --sections speech   # optional Whisper timings
+python scripts/compare_benchmarks.py docs/benchmarks/a.json docs/benchmarks/b.json
+
+cd frontend && npm run build
+LIVE_FACE_IMAGE=../face.jpg LIVE_PYTHON=/abs/path/to/python PERF_LABEL=mine   npx playwright test -c playwright.perf.config.ts               # browser: main-thread work, end-to-end, page loads
+```
+
+Laptop timings vary with background load: compare runs interleaved in one
+session (A, B, A, B), not runs taken hours apart. The Phase 8 method, results
+and remaining bottlenecks are in
+[docs/PHASE8_PERFORMANCE_REPORT.md](docs/PHASE8_PERFORMANCE_REPORT.md).
 
 **Sessions.** The patient device keeps its PIN sign-in for a year. A caregiver
 sign-in ends when the browser closes and, on the server, after 12 hours;
