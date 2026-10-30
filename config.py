@@ -49,5 +49,6 @@ NO_FACE_TIMEOUT       = 25
 FRAME_QUEUE_SIZE      = 2
 STICKY_FRAMES         = 12  # bridge frames with NO detection (blink/turn)
 UNKNOWN_GRACE_FRAMES  = 4   # non-matching frames tolerated before dropping a name
+FRAME_STALE_S         = 3.0 # no frames for this long (camera off, tab hidden): forget the identity
 
 CAM_W, CAM_H = 640, 480
