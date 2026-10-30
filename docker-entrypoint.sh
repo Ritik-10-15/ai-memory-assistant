@@ -10,6 +10,7 @@ if [ "$(id -u)" = "0" ]; then
      find "${DATA_DIR:-/data}" ! -user 10001 -print -quit | grep -q .; then
     chown -R app:app "${DATA_DIR:-/data}"
   fi
+  export HOME=/home/app
   exec setpriv --reuid=app --regid=app --init-groups -- "$@"
 fi
 exec "$@"

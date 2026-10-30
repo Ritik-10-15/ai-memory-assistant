@@ -7,6 +7,7 @@ config.py, database.py, services.py, vision.py, worker.py, camera.py, and
 routes.py. See README.md for the architecture diagram this mirrors.
 """
 import logging
+import os
 
 import config
 from app_instance import app
@@ -36,8 +37,9 @@ def startup():
     start_worker()
 
     from services import WHISPER, TTS, OPENAI
+    llm = OPENAI and bool(os.environ.get("OPENAI_API_KEY"))
     log.info("Memory Assistant started: camera mode %s, voice memos %s, text-to-speech %s, LLM summaries %s",
-             config.CAMERA_MODE, *("on" if f else "off" for f in (WHISPER, TTS, OPENAI)))
+             config.CAMERA_MODE, *("on" if f else "off" for f in (WHISPER, TTS, llm)))
 
 
 if __name__ == "__main__":

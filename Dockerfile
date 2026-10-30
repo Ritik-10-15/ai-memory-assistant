@@ -24,7 +24,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # The app runs as this unprivileged user (see docker-entrypoint.sh).
-RUN useradd --system --uid 10001 --home-dir /app --shell /usr/sbin/nologin app
+RUN useradd --system --uid 10001 --create-home --home-dir /home/app --shell /usr/sbin/nologin app
 
 WORKDIR /app
 
