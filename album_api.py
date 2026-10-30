@@ -21,11 +21,11 @@ import uuid
 
 import cv2
 import numpy as np
-from flask import jsonify, request, send_file, session
+from flask import jsonify, request, send_file
 
 import config
 from app_instance import app
-from auth import caregiver_required, patient_required
+from auth import caregiver_required, is_caregiver, patient_required
 from database import get_db
 
 _PHOTO_ID_RE = re.compile(r"^[0-9a-f]{32}$")
@@ -291,7 +291,7 @@ def api_photo_image(photo_id):
     path = photo_file(photo_id, thumb=request.args.get("size") == "thumb")
     if not path:
         return _error("Photo not found.", 404)
-    if not session.get("caregiver"):
+    if not is_caregiver():
         with get_db() as c:
             if not patient_may_see(c, photo_id):
                 return _error("Photo not found.", 404)

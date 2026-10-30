@@ -21,10 +21,38 @@ def _wants_json():
     return request.path.startswith("/api/")
 
 
+def start_caregiver_session():
+    """Sign a caregiver in. The cookie is shared with the patient PIN
+    sign-in, which is kept for a year on the patient's device; a caregiver
+    signing in on that device must not inherit that, so the whole cookie
+    becomes a browser-session cookie (the PIN is restored on sign-out)."""
+    session.permanent = False
+    session["caregiver"] = True
+    session["caregiver_at"] = time.time()
+
+
+def end_caregiver_session():
+    session.pop("caregiver", None)
+    session.pop("caregiver_at", None)
+    if session.get("patient"):
+        session.permanent = True     # the patient device keeps its PIN sign-in
+
+
+def is_caregiver():
+    """Signed in as a caregiver within the last CAREGIVER_SESSION_HOURS."""
+    started = session.get("caregiver_at")
+    if not session.get("caregiver") or not isinstance(started, (int, float)):
+        return False
+    if time.time() - started > config.CAREGIVER_SESSION_HOURS * 3600:
+        end_caregiver_session()
+        return False
+    return True
+
+
 def caregiver_required(f):
     @wraps(f)
     def dec(*a, **kw):
-        if not session.get("caregiver"):
+        if not is_caregiver():
             if _wants_json():
                 return jsonify({"error": "Caregiver sign-in required"}), 401
             return redirect(url_for("caregiver_login"))
@@ -37,7 +65,7 @@ def patient_required(f):
     A caregiver session also opens it."""
     @wraps(f)
     def dec(*a, **kw):
-        if config.PATIENT_PIN and not (session.get("patient") or session.get("caregiver")):
+        if config.PATIENT_PIN and not (session.get("patient") or is_caregiver()):
             if _wants_json():
                 return jsonify({"error": "Not signed in"}), 401
             return redirect(url_for("patient_login"))
