@@ -8,13 +8,13 @@ project README for the full threading diagram.
 import queue
 import threading
 import time
-from collections import deque
+from collections import OrderedDict, deque
 
 import numpy as np
 
 import config
 from database import get_db
-from vision import display_name, recognize, visit_tracker
+from vision import VisitTracker, display_name, recognize, visit_tracker
 
 
 class LatestFrames(queue.Queue):
@@ -34,20 +34,86 @@ class LatestFrames(queue.Queue):
             self.not_empty.notify()
 
 
-frame_q      = LatestFrames(maxsize=config.FRAME_QUEUE_SIZE)
-_score_buffer = deque(maxlen=config.SMOOTH_WINDOW)
+class TenantFrames(LatestFrames):
+    """The same newest-frame buffer, kept separately for each sandbox: a new
+    frame replaces only that sandbox's waiting frame, and the worker takes
+    sandboxes in turn, so one visitor's camera can never crowd out or stand
+    in for another's. Items are (bgr, face_row, tenant); in the household
+    mode there is one tenant, None, and it behaves exactly like LatestFrames(1)."""
 
-detection = {
+    def _init(self, maxsize):
+        self.queue = OrderedDict()
+
+    def _qsize(self):
+        return len(self.queue)
+
+    def _put(self, item):
+        self.queue[item[2] if isinstance(item, tuple) and len(item) > 2 else None] = item
+
+    def _get(self):
+        return self.queue.popitem(last=False)[1]
+
+    def put_nowait(self, item):
+        with self.not_full:
+            key = item[2] if isinstance(item, tuple) and len(item) > 2 else None
+            replaced = key in self.queue
+            self._put(item)
+            if not replaced:
+                self.unfinished_tasks += 1
+            self.not_empty.notify()
+
+
+frame_q = TenantFrames()
+
+
+class RecognitionState:
+    """Everything the identity state machine remembers between frames, for
+    one household or one sandbox."""
+
+    def __init__(self, detection=None, lock=None, tracker=None):
+        self.detection = detection if detection is not None else dict(_IDLE)
+        self.lock = lock or threading.Lock()
+        self.visit_tracker = tracker or VisitTracker()
+        self.score_buffer = deque(maxlen=config.SMOOTH_WINDOW)
+        self.sticky_pid = None
+        self.sticky_count = 0
+        self.unknown_streak = 0
+        self.last_frame_at = None   # time.monotonic() of the last frame processed
+        self.no_face = 0            # consecutive frames without a face (camera.py)
+
+
+_IDLE = {
     "person_id": None, "name": None, "confidence": 0.0, "state": "idle",
     "emotion": None, "relationship": None, "notes": None,
     "last_memory": None, "recent_memories": [], "last_visit_at": None,
 }
-det_lock = threading.Lock()
 
-_sticky_pid     = None
-_sticky_count   = 0
-_unknown_streak = 0
-_last_frame_at  = None   # time.monotonic() of the last frame processed
+# The household's state keeps its module-level names (camera.py, routes.py, tests).
+detection = dict(_IDLE)
+det_lock = threading.Lock()
+_states = {None: RecognitionState(detection, det_lock, visit_tracker)}
+_states_lock = threading.Lock()
+
+
+def state(tenant=...):
+    """Recognition state of `tenant` (default: the current one)."""
+    key = config.tenant() if tenant is ... else tenant
+    with _states_lock:
+        st = _states.get(key)
+        if st is None:
+            st = _states[key] = RecognitionState()
+        return st
+
+
+_current_state = state
+
+
+def forget_tenant(tenant_id):
+    """A deleted sandbox: drop its recognition state and any waiting frame."""
+    with _states_lock:
+        _states.pop(tenant_id, None)
+    with frame_q.mutex:
+        frame_q.queue.pop(tenant_id, None)
 
 
 def _get_person_data(pid):
@@ -82,26 +148,35 @@ def _recognition_worker():
         try:
             item = frame_q.get(timeout=1.0)
         except queue.Empty:
-            _expire_if_stale()
-            visit_tracker.tick()   # visits still close while no frames arrive
+            for key in list(_states):
+                token = config.set_tenant(key)
+                try:
+                    _expire_if_stale()
+                    state().visit_tracker.tick()   # visits still close while no frames arrive
+                finally:
+                    config.reset_tenant(token)
             continue
-        bgr, face_row = item
-        face_present = face_row is not None
-        pid, score, name = recognize(bgr, face_row) if face_present else (None, 0.0, None)
-        _step(pid, score, name, face_present)
+        bgr, face_row = item[0], item[1]
+        token = config.set_tenant(item[2] if len(item) > 2 else None)
+        try:
+            face_present = face_row is not None
+            pid, score, name = recognize(bgr, face_row) if face_present else (None, 0.0, None)
+            _step(pid, score, name, face_present)
+        finally:
+            config.reset_tenant(token)
 
 
 def _step(pid, score, name, face_present):
     """Turn one frame's recognition result into the shared `detection`:
     smoothing, sticky identity, visit tracking. Separate from the loop so
     the identity state machine can be tested with synthetic results."""
-    global _sticky_pid, _sticky_count, _unknown_streak, _last_frame_at
-    _last_frame_at = time.monotonic()
+    st = _current_state()          # (`state` below is the recognition state string)
+    st.last_frame_at = time.monotonic()
     # Smooth per identity: frames that matched someone else (or no one)
     # count as 0 for this person, so a weak match can never be confirmed
     # on the strength of the previous visitor's scores.
-    _score_buffer.append((pid, score if pid else 0.0))
-    smooth = float(np.mean([s if p == pid else 0.0 for p, s in _score_buffer])) if pid else 0.0
+    st.score_buffer.append((pid, score if pid else 0.0))
+    smooth = float(np.mean([s if p == pid else 0.0 for p, s in st.score_buffer])) if pid else 0.0
 
     if pid and smooth >= config.SCORE_HIGH:
         state = "high"
@@ -114,22 +189,22 @@ def _step(pid, score, name, face_present):
 
     # Sticky: bridge brief gaps without ever lying about identity.
     if state == "high" and pid:
-        _sticky_pid, _sticky_count, _unknown_streak = pid, config.STICKY_FRAMES, 0
-    elif face_present and pid != _sticky_pid and _sticky_pid:
-        _unknown_streak += 1
-        if _unknown_streak < config.UNKNOWN_GRACE_FRAMES and _sticky_count > 0:
-            _sticky_count -= 1
-            pid, name, state = _sticky_pid, display_name(_sticky_pid), "high"
+        st.sticky_pid, st.sticky_count, st.unknown_streak = pid, config.STICKY_FRAMES, 0
+    elif face_present and pid != st.sticky_pid and st.sticky_pid:
+        st.unknown_streak += 1
+        if st.unknown_streak < config.UNKNOWN_GRACE_FRAMES and st.sticky_count > 0:
+            st.sticky_count -= 1
+            pid, name, state = st.sticky_pid, display_name(st.sticky_pid), "high"
         else:
-            _sticky_pid, _sticky_count = None, 0
-    elif not face_present and _sticky_pid:
-        if _sticky_count > 0:
-            _sticky_count -= 1
-            pid, name, state = _sticky_pid, display_name(_sticky_pid), "high"
+            st.sticky_pid, st.sticky_count = None, 0
+    elif not face_present and st.sticky_pid:
+        if st.sticky_count > 0:
+            st.sticky_count -= 1
+            pid, name, state = st.sticky_pid, display_name(st.sticky_pid), "high"
         else:
-            _sticky_pid = None
+            st.sticky_pid = None
     else:
-        _unknown_streak = 0
+        st.unknown_streak = 0
 
     # Only a confirmed identity carries a name beyond "might be", and only a
     # confirmed identity carries private details (relationship, notes,
@@ -139,11 +214,11 @@ def _step(pid, score, name, face_present):
     person_data = None
     if pid and state == "high":
         person_data = _get_person_data(pid)
-        visit_tracker.seen(pid, smooth)
-    visit_tracker.tick()
+        st.visit_tracker.seen(pid, smooth)
+    st.visit_tracker.tick()
 
-    with det_lock:
-        detection.update({
+    with st.lock:
+        st.detection.update({
             "person_id": pid, "name": name,
             "confidence": round(smooth, 3), "state": state,
             "emotion": None,
@@ -159,25 +234,22 @@ def _expire_if_stale():
     """Called while no frames arrive. After FRAME_STALE_S without a frame,
     nobody can be vouched for: drop the identity rather than keep showing
     the last visitor (and their memories) indefinitely."""
-    if _last_frame_at is None or time.monotonic() - _last_frame_at < config.FRAME_STALE_S:
+    st = state()
+    if st.last_frame_at is None or time.monotonic() - st.last_frame_at < config.FRAME_STALE_S:
         return
-    with det_lock:
-        active = detection["state"] != "idle"
-    if active or _sticky_pid:
+    with st.lock:
+        active = st.detection["state"] != "idle"
+    if active or st.sticky_pid:
         reset_state()
 
 
 def reset_state():
     """Forget the current identity entirely (tests; also used when frames stop)."""
-    global _sticky_pid, _sticky_count, _unknown_streak
-    _score_buffer.clear()
-    _sticky_pid, _sticky_count, _unknown_streak = None, 0, 0
-    with det_lock:
-        detection.update({
-            "person_id": None, "name": None, "confidence": 0.0, "state": "idle",
-            "emotion": None, "relationship": None, "notes": None,
-            "last_memory": None, "recent_memories": [], "last_visit_at": None,
-        })
+    st = state()
+    st.score_buffer.clear()
+    st.sticky_pid, st.sticky_count, st.unknown_streak = None, 0, 0
+    with st.lock:
+        st.detection.update({**_IDLE, "recent_memories": []})
 
 
 _thread = None

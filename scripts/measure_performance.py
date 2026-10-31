@@ -110,11 +110,11 @@ def main(face_path):
 
     def timed_get(*a, **k):
         item = real_get(*a, **k)
-        ages.append((time.perf_counter() - item[2]) * 1000)
-        return item[0], item[1]
+        ages.append((time.perf_counter() - item[-1]) * 1000)
+        return item[:-1]
     worker.frame_q.get = timed_get
     real_put = worker.frame_q.put_nowait
-    worker.frame_q.put_nowait = lambda item: real_put((item[0], item[1], time.perf_counter()))
+    worker.frame_q.put_nowait = lambda item: real_put((*item, time.perf_counter()))
     worker.start_worker()
     dropped = 0
     t_end = time.perf_counter() + 8

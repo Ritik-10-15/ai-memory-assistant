@@ -11,6 +11,7 @@ import threading
 import time
 from collections import defaultdict, deque
 from functools import wraps
+from urllib.parse import quote
 
 from flask import jsonify, redirect, request, session, url_for
 
@@ -39,7 +40,11 @@ def end_caregiver_session():
 
 
 def is_caregiver():
-    """Signed in as a caregiver within the last CAREGIVER_SESSION_HOURS."""
+    """Signed in as a caregiver within the last CAREGIVER_SESSION_HOURS. In
+    sandbox mode: signed into a live sandbox account (accounts_api sets the
+    current sandbox only for such requests)."""
+    if config.SANDBOX_MODE:
+        return config.tenant() is not None
     started = session.get("caregiver_at")
     if not session.get("caregiver") or not isinstance(started, (int, float)):
         return False
@@ -49,13 +54,21 @@ def is_caregiver():
     return True
 
 
+def _sign_in_page(default):
+    """Sandbox visitors sign in with their own account; the household uses
+    the caregiver password or the patient PIN."""
+    if config.SANDBOX_MODE:
+        return redirect("/signin?next=" + quote(request.full_path.rstrip("?"), safe="/"))
+    return redirect(url_for(default))
+
+
 def caregiver_required(f):
     @wraps(f)
     def dec(*a, **kw):
         if not is_caregiver():
             if _wants_json():
                 return jsonify({"error": "Caregiver sign-in required"}), 401
-            return redirect(url_for("caregiver_login"))
+            return _sign_in_page("caregiver_login")
         return f(*a, **kw)
     return dec
 
@@ -65,10 +78,11 @@ def patient_required(f):
     A caregiver session also opens it."""
     @wraps(f)
     def dec(*a, **kw):
-        if config.PATIENT_PIN and not (session.get("patient") or is_caregiver()):
+        locked = config.SANDBOX_MODE or config.PATIENT_PIN
+        if locked and not (is_caregiver() or (not config.SANDBOX_MODE and session.get("patient"))):
             if _wants_json():
                 return jsonify({"error": "Not signed in"}), 401
-            return redirect(url_for("patient_login"))
+            return _sign_in_page("patient_login")
         return f(*a, **kw)
     return dec
 

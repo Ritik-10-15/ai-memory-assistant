@@ -58,12 +58,12 @@ def photo_file(photo_id, thumb=False):
     Thumbnails of photos uploaded before they existed are made on demand."""
     if not photo_id or not _PHOTO_ID_RE.match(photo_id):
         return None
-    path = config.PHOTOS_DIR / f"{photo_id}.jpg"
+    path = config.photos_dir() / f"{photo_id}.jpg"
     if not path.exists():
         return None
     if not thumb:
         return path
-    small = config.PHOTOS_DIR / f"{photo_id}_thumb.jpg"
+    small = config.photos_dir() / f"{photo_id}_thumb.jpg"
     if not small.exists():
         img = cv2.imread(str(path))
         if img is None:
@@ -75,7 +75,7 @@ def photo_file(photo_id, thumb=False):
 def delete_photo_files(photo_id):
     if photo_id and _PHOTO_ID_RE.match(photo_id):
         for name in (f"{photo_id}.jpg", f"{photo_id}_thumb.jpg"):
-            (config.PHOTOS_DIR / name).unlink(missing_ok=True)
+            (config.photos_dir() / name).unlink(missing_ok=True)
 
 
 def profile_photo_file(pid):
@@ -124,9 +124,9 @@ def _store_image(upload):
         return "invalid_image"
     img = _fit(img, MAX_SIDE)
     photo_id = uuid.uuid4().hex
-    config.PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(config.PHOTOS_DIR / f"{photo_id}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 85])
-    _write_thumb(img, config.PHOTOS_DIR / f"{photo_id}_thumb.jpg")
+    config.photos_dir().mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(config.photos_dir() / f"{photo_id}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    _write_thumb(img, config.photos_dir() / f"{photo_id}_thumb.jpg")
     return photo_id, img.shape[1], img.shape[0]
 
 

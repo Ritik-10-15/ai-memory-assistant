@@ -9,7 +9,7 @@ const QUERY_ERRORS: Record<string, string> = {
   locked: "Too many attempts. Please wait a few minutes and try again.",
 };
 
-function Shell({
+export function Shell({
   title,
   description,
   children,
@@ -81,7 +81,13 @@ export function CaregiverSignIn() {
   const form = useSecretForm(api.caregiverLogin, () => navigate(next, { replace: true }));
 
   useEffect(() => {
-    api.session().then((s) => s.caregiver && navigate(next, { replace: true })).catch(() => undefined);
+    api
+      .session()
+      .then((s) => {
+        if (s.sandbox) navigate(`/signin?next=${encodeURIComponent(next)}`, { replace: true });
+        else if (s.caregiver) navigate(next, { replace: true });
+      })
+      .catch(() => undefined);
   }, [navigate, next]);
 
   return (
@@ -113,6 +119,10 @@ export function CaregiverSignIn() {
 export function PatientSignIn() {
   const navigate = useNavigate();
   const form = useSecretForm(api.patientLogin, () => navigate("/", { replace: true }));
+
+  useEffect(() => {
+    api.session().then((s) => s.sandbox && navigate("/signin?next=/", { replace: true })).catch(() => undefined);
+  }, [navigate]);
 
   return (
     <Shell

@@ -76,7 +76,33 @@ def cosine_match(feat, gallery_feats):
 _gallery      = {}   # pid -> [np.ndarray, ...]
 _name_map     = {}   # pid -> display name
 _gallery_lock = threading.Lock()
-_match_cache  = (None, None, [])   # (gallery it was built from, unit-row matrix, pid per row)
+# Sandbox mode: one gallery per sandbox, tenant id -> (gallery, names). The
+# single-household mode keeps using _gallery / _name_map above.
+_tenant_galleries = {}
+_match_caches = {}   # tenant (None = household) -> (gallery it was built from, unit-row matrix, pid per row)
+
+
+def _current():
+    """(gallery, names) of the current sandbox, or of the household. Loads a
+    sandbox's gallery on first use (e.g. after a restart). Call without the lock."""
+    t = config.tenant()
+    if t is None:
+        with _gallery_lock:
+            return _gallery, _name_map
+    with _gallery_lock:
+        entry = _tenant_galleries.get(t)
+    if entry is None:
+        load_known_faces()
+        with _gallery_lock:
+            entry = _tenant_galleries.get(t, ({}, {}))
+    return entry
+
+
+def forget_tenant(tenant_id):
+    """Drop a deleted sandbox's embeddings from memory."""
+    with _gallery_lock:
+        _tenant_galleries.pop(tenant_id, None)
+        _match_caches.pop(tenant_id, None)
 
 
 def _match_matrix(gallery):
@@ -85,14 +111,14 @@ def _match_matrix(gallery):
     product (the same cosine similarity as cosine_match). Rebuilt only when
     the gallery dict is replaced, which load_known_faces() does on every
     reload. Call with _gallery_lock held."""
-    global _match_cache
-    built_from, matrix, owners = _match_cache
+    key = config.tenant()
+    built_from, matrix, owners = _match_caches.get(key, (None, None, []))
     if built_from is not gallery:
         owners = [pid for pid, feats in gallery.items() for _ in feats]
         rows = [np.asarray(f, dtype=np.float32).reshape(-1) for feats in gallery.values() for f in feats]
         matrix = np.vstack(rows) if rows else np.zeros((0, 128), np.float32)
         matrix /= np.maximum(np.linalg.norm(matrix, axis=1, keepdims=True), 1e-12)
-        _match_cache = (gallery, matrix, owners)
+        _match_caches[key] = (gallery, matrix, owners)
     return matrix, owners
 
 
@@ -120,10 +146,10 @@ def _embed_photo_file(path):
 
 
 def _load_cache():
-    if not config.GALLERY_CACHE.exists():
+    if not config.gallery_cache().exists():
         return {}
     try:
-        data = np.load(str(config.GALLERY_CACHE), allow_pickle=False)
+        data = np.load(str(config.gallery_cache()), allow_pickle=False)
         paths, mtimes, feats = list(data["paths"]), list(data["mtimes"]), data["feats"]
         return {str(p): (float(m), feats[i]) for i, (p, m) in enumerate(zip(paths, mtimes))}
     except Exception:
@@ -136,7 +162,7 @@ def _save_cache(cache):
     paths  = np.array(list(cache.keys()))
     mtimes = np.array([v[0] for v in cache.values()])
     feats  = np.stack([np.asarray(v[1]).reshape(-1) for v in cache.values()])
-    np.savez(str(config.GALLERY_CACHE), paths=paths, mtimes=mtimes, feats=feats)
+    np.savez(str(config.gallery_cache()), paths=paths, mtimes=mtimes, feats=feats)
 
 
 def load_known_faces():
@@ -150,7 +176,7 @@ def load_known_faces():
         people = c.execute("SELECT id,name FROM people").fetchall()
     for p in people:
         pid, pname = p["id"], p["name"]
-        face_dir = config.KNOWN_FACES_DIR / pid
+        face_dir = config.known_faces_dir() / pid
         if not face_dir.exists():
             continue
         new_names[pid] = pname
@@ -172,7 +198,10 @@ def load_known_faces():
         if feats:
             new_gallery[pid] = feats
     with _gallery_lock:
-        _gallery, _name_map = new_gallery, new_names
+        if config.tenant() is None:
+            _gallery, _name_map = new_gallery, new_names
+        else:
+            _tenant_galleries[config.tenant()] = (new_gallery, new_names)
     _save_cache(cache)
     total = sum(len(v) for v in new_gallery.values())
     log.info("Gallery: %d embeddings for %d people (%d newly computed, %d from cache)",
@@ -185,7 +214,7 @@ def display_name(pid):
     """The enrolled person's current name. Always read through here: every
     gallery reload replaces _name_map, so a reference imported earlier
     would go stale."""
-    return _name_map.get(pid)
+    return _current()[1].get(pid)
 
 
 def models_loaded():
@@ -194,8 +223,8 @@ def models_loaded():
 
 def gallery_counts():
     """{pid: number of usable embeddings} — what 'enrolled' really means."""
-    with _gallery_lock:
-        return {pid: len(feats) for pid, feats in _gallery.items()}
+    gallery, _ = _current()
+    return {pid: len(feats) for pid, feats in gallery.items()}
 
 
 def assess_enrollment_photo(bgr):
@@ -221,9 +250,9 @@ def recognize(bgr, face_row):
     """Returns (pid, score, name), or (None, best_score, None) if nobody
     clears SCORE_MEDIUM. This is the open-set rejection boundary — an
     empty or unmatched gallery must never guess."""
+    gallery, names = _current()
     with _gallery_lock:
-        matrix, owners = _match_matrix(_gallery)
-        names = _name_map
+        matrix, owners = _match_matrix(gallery)
     if not owners:
         return None, 0.0, None
     try:

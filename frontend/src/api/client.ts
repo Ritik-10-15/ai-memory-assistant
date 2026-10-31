@@ -1,4 +1,5 @@
 import type {
+  AccountInfo,
   Album,
   AlbumDetail,
   AlbumInput,
@@ -159,6 +160,13 @@ export const api = {
   caregiverLogin: (password: string) => request<{ ok: true }>("POST", "/api/caregiver/login", { password }),
   caregiverLogout: () => request<{ ok: true }>("POST", "/api/caregiver/logout"),
   patientLogin: (pin: string) => request<{ ok: true }>("POST", "/api/patient/login", { pin }),
+  signUp: (username: string, password: string, consent: boolean) =>
+    request<{ account: AccountInfo }>("POST", "/api/account/signup", { username, password, consent }),
+  accountLogin: (username: string, password: string) =>
+    request<{ account: AccountInfo }>("POST", "/api/account/login", { username, password }),
+  accountLogout: () => request<{ ok: true }>("POST", "/api/account/logout"),
+  account: () => request<{ account: AccountInfo }>("GET", "/api/account"),
+  deleteAccount: () => request<{ ok: true }>("DELETE", "/api/account"),
 
   // Patient screen (existing endpoints)
   currentPerson: (signal?: AbortSignal) => request<CurrentPerson>("GET", "/api/current-person", undefined, signal),

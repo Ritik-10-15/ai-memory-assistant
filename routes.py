@@ -27,9 +27,8 @@ from database import get_db
 import services
 from services import auto_log
 from vision import load_known_faces
-from worker import detection, det_lock
+from worker import state as recognition_state
 from camera import generate_frames, capture_enroll_frame, process_frame, decode_jpeg
-import threading
 
 
 # ── REACT FRONTEND ────────────────────────────────────────────────────
@@ -39,7 +38,15 @@ def spa():
     if not index_file.exists():
         return ("Frontend not built. Run `npm install && npm run build` in "
                 "frontend/, or use `npm run dev` during development.", 503)
-    resp = send_from_directory(config.FRONTEND_DIST, "index.html")
+    if config.SANDBOX_MODE:
+        # Lets the public homepage offer sign-ups without calling the API.
+        mark = '<meta name="memory-assistant-sandbox" content="1" />'
+        html = index_file.read_text(encoding="utf-8")
+        html = html.replace("</head>", mark + "</head>", 1) if "</head>" in html else mark + html
+        resp = make_response(html)
+        resp.mimetype = "text/html"
+    else:
+        resp = send_from_directory(config.FRONTEND_DIST, "index.html")
     resp.headers["Cache-Control"] = "no-cache"
     return resp
 
@@ -95,6 +102,16 @@ def readyz():
     }), 200 if ready else 503
 
 
+@app.route("/signin")
+@app.route("/signup")
+def account_pages():
+    """Sandbox sign-in and sign-up (SANDBOX_MODE); the household signs in
+    with the caregiver password instead."""
+    if not config.SANDBOX_MODE:
+        return redirect(url_for("caregiver_login"))
+    return spa()
+
+
 @app.route("/welcome")
 def welcome():
     """Public homepage. Shows only fictional, simulated demo content — no
@@ -105,6 +122,8 @@ def welcome():
 # ── PATIENT ROUTES ────────────────────────────────────────────────────
 @app.route("/patient/login", methods=["GET", "POST"])
 def patient_login():
+    if config.SANDBOX_MODE:
+        return redirect("/signin")
     if not config.PATIENT_PIN:
         return redirect(url_for("index"))
     if request.method == "POST":
@@ -156,8 +175,9 @@ def api_frame():
 @app.route("/api/current-person")
 @patient_required
 def api_current_person():
-    with det_lock:
-        d = dict(detection)
+    st = recognition_state()
+    with st.lock:
+        d = dict(st.detection)
     state = d["state"]; name = d.get("name", "")
     if state == "high" and name:
         d["display_message"] = f"This is {name.title()}"
@@ -186,8 +206,9 @@ def api_save_memory():
         return jsonify({"error": "Empty summary"}), 400
     with get_db() as c:
         if not pid:
-            with det_lock:
-                name = detection.get("name", "")
+            st = recognition_state()
+            with st.lock:
+                name = st.detection.get("name", "")
             if name:
                 row = c.execute(
                     "SELECT id FROM people WHERE LOWER(name)=LOWER(?)", (name,)
@@ -222,9 +243,9 @@ def api_upload_audio():
     audio = request.files.get("audio")
     if not pid or not audio:
         return jsonify({"error": "Missing data"}), 400
-    path = config.UPLOADS_DIR / f"{uuid.uuid4()}.webm"
+    path = config.uploads_dir() / f"{uuid.uuid4()}.webm"
     audio.save(str(path))
-    threading.Thread(target=auto_log, args=(pid, str(path)), daemon=True).start()
+    config.in_background(auto_log, pid, str(path))
     return jsonify({"message": "Transcribing in background..."})
 
 
@@ -245,6 +266,8 @@ def api_stats():
 # ── CAREGIVER ROUTES ──────────────────────────────────────────────────
 @app.route("/caregiver/login", methods=["GET", "POST"])
 def caregiver_login():
+    if config.SANDBOX_MODE:
+        return redirect("/signin")
     if request.method == "POST":
         if retry_after("caregiver"):
             return redirect(url_for("caregiver_login", error="locked"))
@@ -287,7 +310,7 @@ def add_person():
             flash("Name is required")
             return redirect(url_for("add_person"))
         pid = str(uuid.uuid4())
-        face_dir = config.KNOWN_FACES_DIR / pid
+        face_dir = config.known_faces_dir() / pid
         face_dir.mkdir(parents=True, exist_ok=True)
         photos = request.files.getlist("photos"); saved = 0
         for photo in photos:
@@ -301,7 +324,7 @@ def add_person():
                 (pid, name, request.form.get("relationship", ""),
                  request.form.get("notes", ""), request.form.get("dob", ""),
                  request.form.get("tts_greeting", "")))
-        threading.Thread(target=load_known_faces, daemon=True).start()
+        config.in_background(load_known_faces)
         flash(f"✅ Added {name} with {saved} photo(s)")
         return redirect(url_for("caregiver_dashboard"))
     return spa()
@@ -325,7 +348,7 @@ def edit_person(pid):
                  request.form.get("notes"), request.form.get("dob"),
                  request.form.get("tts_greeting"), pid))
         photos = request.files.getlist("photos")
-        face_dir = config.KNOWN_FACES_DIR / pid
+        face_dir = config.known_faces_dir() / pid
         face_dir.mkdir(exist_ok=True)
         existing = len(list(face_dir.iterdir())); saved = 0
         for i, photo in enumerate(photos):
@@ -333,7 +356,7 @@ def edit_person(pid):
                 ext = Path(photo.filename).suffix.lower()
                 photo.save(str(face_dir / f"{existing + i:03d}{ext}"))
                 saved += 1
-        threading.Thread(target=load_known_faces, daemon=True).start()
+        config.in_background(load_known_faces)
         flash(f"✅ Updated — {saved} new photo(s) added")
         return redirect(url_for("caregiver_dashboard"))
 
@@ -354,10 +377,10 @@ def delete_person(pid):
             c.execute("DELETE FROM people WHERE id=?", (pid,))
     # Only remove a folder that belongs to a real person: an arbitrary id
     # such as ".." would otherwise point outside known_faces/.
-    d = config.KNOWN_FACES_DIR / pid
+    d = config.known_faces_dir() / pid
     if p and d.exists():
         shutil.rmtree(d)
-    threading.Thread(target=load_known_faces, daemon=True).start()
+    config.in_background(load_known_faces)
     flash(f"Deleted {p['name'] if p else pid}")
     return redirect(url_for("caregiver_dashboard"))
 
@@ -439,10 +462,10 @@ def enroll_capture(pid):
             success, reason = capture_enroll_frame(pid, frame)
     else:
         success, reason = capture_enroll_frame(pid)
-    face_dir = config.KNOWN_FACES_DIR / pid
+    face_dir = config.known_faces_dir() / pid
     count = len(list(face_dir.iterdir())) if face_dir.exists() else 0
     if success and count >= 10:
-        threading.Thread(target=load_known_faces, daemon=True).start()
+        config.in_background(load_known_faces)
     body = {"success": success, "count": count}
     if reason:
         body["reason"] = reason

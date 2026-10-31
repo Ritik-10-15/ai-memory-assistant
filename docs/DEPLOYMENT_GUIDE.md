@@ -1,17 +1,17 @@
 # Deployment guide
 
-Memory Assistant ships as two separate things. Pick the one you need.
+Memory Assistant can be deployed in three ways. Pick the one you need.
 
-| | **Public demo** | **Private app** |
-|---|---|---|
-| What it is | The homepage and an interactive, simulated demo with fictional people and illustrated albums | The real patient screen, caregiver workspace, recognition and family photos |
-| Who should see it | Anyone (recruiters, visitors) | Only the patient's household and caregivers |
-| Data | None. No backend, no database, no camera | Real people, faces, memories and photos: private |
-| Build | `npm run build:demo` → static files, or `Dockerfile.demo` | `Dockerfile` (Flask + gunicorn + OpenCV) |
-| Where | Any static host, or the demo container | One machine you control: your own computer with Docker, or one cloud server |
+| | **Public demo** | **Sandbox server** | **Private app** |
+|---|---|---|---|
+| What it is | The homepage and an interactive, simulated demo with fictional people and illustrated albums | The real app; every visitor signs up for their own private, temporary copy with a fictional family | The real patient screen, caregiver workspace, recognition and family photos |
+| Who should see it | Anyone | Anyone (recruiters, visitors) | Only the patient's household and caregivers |
+| Data | None. No backend, no camera | Each visitor's own sandbox, deleted after 7 days | Real people, faces, memories and photos: private |
+| Build | `npm run build:demo`, or `Dockerfile.demo` | `Dockerfile` with `SANDBOX_MODE=1` | `Dockerfile` (Flask + gunicorn + OpenCV) |
+| Where | Any static host, or the demo container | One server with HTTPS | One machine you control |
 
-Never put real people's photos or details into the public demo; it has no
-way to store them and should never need to.
+Never put a real household's data on a sandbox server, and never put real
+people's photos or details into the public demo.
 
 ---
 
@@ -88,6 +88,32 @@ A ~95 MB Caddy image that serves the static files without root, with
 security headers, long caching for hashed assets, `/healthz`, and a 404 for
 anything under `/api/`. Put HTTPS in front of it (most container platforms
 do this for you).
+
+### Sandbox server ("try it yourself")
+
+The same image as the private app, with `SANDBOX_MODE=1`. Visitors open the
+homepage, choose **Create a free sandbox**, pick a username and password (no
+email) and confirm how face photos are used. Each gets a private copy under
+`DATA_DIR/tenants/<random id>/` with a fictional family (three people,
+memories, three weeks of visits, two albums of drawn pictures). They can use
+everything, including enrolling their own face to see live recognition. One
+visitor never sees another's data or camera.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SANDBOX_MODE` | off | `1` turns the server into a sandbox server. The shared caregiver password and patient PIN are then not used (and not required). |
+| `SANDBOX_DAYS` | 7 | Each sandbox is deleted, with all its files, this many days after sign-up. Visitors can delete theirs at once in Settings. |
+| `SANDBOX_MAX` | 50 | Live sandboxes at once; sign-up says "the demo is full" beyond that. |
+
+Still required: `SECRET_KEY`, HTTPS (`SECURE_COOKIES=1` behind Caddy), and
+`CAMERA_MODE=browser` (the image default). Sign-ups are limited to 5 per
+hour per address; sign-ins pause after 5 wrong passwords. Expired sandboxes
+are removed at start-up and every 15 minutes. Recognition runs one frame at
+a time for all visitors, so a small server suits a handful of visitors using
+the camera at once.
+
+Run it locally: add `SANDBOX_MODE=1` to `.env` and `docker compose up -d`;
+the homepage at <http://localhost:8000/welcome> shows the sign-up.
 
 ---
 

@@ -47,9 +47,18 @@ export interface AppStatus {
 
 /** GET /api/session */
 export interface SessionInfo {
+  /** A public "try it yourself" deployment: visitors have their own accounts. */
+  sandbox?: boolean;
   caregiver: boolean;
   patient: boolean;
   patient_pin_required: boolean;
+}
+
+/** GET /api/account (sandbox mode). Times are Unix seconds. */
+export interface AccountInfo {
+  username: string;
+  created_at: number;
+  expires_at: number;
 }
 
 /** GET /api/stats */

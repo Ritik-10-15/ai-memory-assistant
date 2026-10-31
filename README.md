@@ -408,6 +408,10 @@ In short:
   `docker compose up -d --build` → <http://localhost:8000>.
 - **Private app on AWS** — releases with `sudo bash aws/deploy.sh`, which
   backs up, checks `/readyz` and rolls back automatically.
+- **Sandbox server** — the same image with `SANDBOX_MODE=1`: visitors sign up
+  for their own private copy with a fictional family, try everything
+  (including live recognition of their own face), and it is deleted after
+  7 days. One visitor never sees another's data or camera.
 
 Locally, OpenCV reads a webcam plugged into the machine running the app. A
 cloud server has no webcam, so the Docker image runs in **browser-camera
@@ -484,6 +488,7 @@ npm run typecheck                   # TypeScript, strict mode
 npm test                            # Vitest + React Testing Library + axe
 npm run build && npm run test:e2e   # Playwright: desktop, tablet, mobile
 npm run build:demo && npx playwright test -c playwright.demo.config.ts   # public demo: no API, no camera
+LIVE_FACE_IMAGE=../face.jpg LIVE_PYTHON=/abs/path/to/python npx playwright test -c playwright.sandbox.config.ts   # two visitors, two sandboxes
 ```
 
 **With the real face models** (local; needs `python scripts/download_models.py`

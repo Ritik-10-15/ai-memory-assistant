@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 def get_db():
     """Open a connection to the current DB_PATH. Reads config.DB_PATH at
     call time (not import time) so tests can monkeypatch it per-test."""
-    conn = sqlite3.connect(config.DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(config.db_path(), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     # Enforce the declared foreign keys (per connection in SQLite). Deletes
@@ -29,7 +29,7 @@ def get_db():
 
 def init_db():
     # An existing database that still needs migrating is backed up first.
-    db = Path(config.DB_PATH)
+    db = Path(config.db_path())
     had_data = db.exists() and db.stat().st_size > 0
     with get_db() as c:
         c.executescript("""

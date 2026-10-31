@@ -50,7 +50,7 @@ def _send(client, img, frames=1):
     for _ in range(frames):
         assert client.post("/api/frame", data=_jpeg(img), content_type="image/jpeg").status_code == 200
         try:
-            bgr, row = worker.frame_q.get_nowait()
+            bgr, row = worker.frame_q.get_nowait()[:2]
         except queue.Empty:
             continue
         pid, score, name = vision.recognize(bgr, row) if row is not None else (None, 0.0, None)

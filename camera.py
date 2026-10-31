@@ -12,14 +12,12 @@ import numpy as np
 
 import config
 from vision import detect_faces
-from worker import frame_q, det_lock, detection
-from vision import visit_tracker
+from worker import frame_q, det_lock, detection, state as recognition_state
 
 log = logging.getLogger(__name__)
 
 _camera  = None
 _cam_lock = threading.Lock()
-_no_face  = 0
 
 
 def get_camera():
@@ -49,26 +47,28 @@ def process_frame(frame):
     """Detect faces in one BGR frame, hand the largest to the recognition
     worker, and run the no-face timeout. Shared by the server-camera MJPEG
     stream and browser-posted frames (/api/frame). Returns the face row or None."""
-    global _no_face
     faces = detect_faces(frame)   # YuNet, once per frame
     best_row = max(faces, key=lambda f: f[2] * f[3]) if len(faces) > 0 else None
-    frame_q.put_nowait((frame.copy(), best_row))   # replaces a frame still waiting
+    # Tagged with the sandbox it came from (None for the household); replaces
+    # that sandbox's frame if one is still waiting.
+    frame_q.put_nowait((frame.copy(), best_row, config.tenant()))
 
+    st = recognition_state()
     if best_row is None:
-        _no_face += 1
-        if _no_face >= config.NO_FACE_TIMEOUT:
-            visit_tracker.gone()
-            with det_lock:
+        st.no_face += 1
+        if st.no_face >= config.NO_FACE_TIMEOUT:
+            st.visit_tracker.gone()
+            with st.lock:
                 # Clear every person field, not just the name, so nothing
                 # about the previous visitor lingers in the API response.
-                detection.update({
+                st.detection.update({
                     "person_id": None, "name": None, "confidence": 0.0,
                     "state": "idle", "emotion": None, "relationship": None,
                     "notes": None, "last_memory": None, "recent_memories": [],
                     "last_visit_at": None,
                 })
     else:
-        _no_face = 0
+        st.no_face = 0
     return best_row
 
 
@@ -146,7 +146,7 @@ def capture_enroll_frame(pid, frame=None):
     pad = int(0.35 * max(w, h))
     x0, y0 = max(0, x - pad), max(0, y - pad)
     x1, y1 = min(frame.shape[1], x + w + pad), min(frame.shape[0], y + h + pad)
-    face_dir = config.KNOWN_FACES_DIR / pid
+    face_dir = config.known_faces_dir() / pid
     face_dir.mkdir(parents=True, exist_ok=True)
     count = len(list(face_dir.iterdir()))
     cv2.imwrite(str(face_dir / f"{count:03d}.jpg"), frame[y0:y1, x0:x1])

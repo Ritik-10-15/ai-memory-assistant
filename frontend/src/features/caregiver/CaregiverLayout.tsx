@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "@/api/client";
+import { formatAccountDate, useSandbox } from "@/lib/sandbox";
 import { cn } from "@/lib/cn";
 import { useApplyPreferences, usePreferences } from "./preferences";
 
@@ -60,6 +61,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AccountPanel({ onSignOut }: { onSignOut: () => void }) {
+  const { account } = useSandbox();
   return (
     <div className="rounded-3xl border border-line bg-paper p-3">
       <div className="flex items-center gap-3 px-1 pb-3">
@@ -67,8 +69,10 @@ function AccountPanel({ onSignOut }: { onSignOut: () => void }) {
           <UserRound className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="leading-tight">
-          <p className="font-semibold text-ink">Caregiver</p>
-          <p className="text-sm text-ink-muted">Signed in</p>
+          <p className="font-semibold text-ink">{account ? account.username : "Caregiver"}</p>
+          <p className="text-sm text-ink-muted">
+            {account ? `Sandbox until ${formatAccountDate(account.expires_at)}` : "Signed in"}
+          </p>
         </div>
       </div>
       <div className="space-y-1 border-t border-line pt-2">
@@ -128,6 +132,12 @@ export function CaregiverLayout() {
   }, [menuOpen]);
 
   async function signOut() {
+    const s = await api.session().catch(() => null);
+    if (s?.sandbox) {
+      await api.accountLogout().catch(() => undefined);
+      navigate("/signin", { replace: true });
+      return;
+    }
     await api.caregiverLogout().catch(() => undefined);
     navigate("/caregiver/login", { replace: true });
   }
