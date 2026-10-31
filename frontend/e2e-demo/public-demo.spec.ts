@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
 
 test("a visitor can understand the project, run the simulation and browse the albums", async ({ page }) => {
   const seen = watch(page);
-  await page.goto("/");
+  await page.goto("./");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Every familiar face");
 
   // The recognition demo, clearly labelled as a simulation.
@@ -60,18 +60,18 @@ test("a visitor can understand the project, run the simulation and browse the al
 });
 
 test("offers no way into the private app", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
   await expect(page.getByRole("link", { name: /Caregiver login/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Patient screen" })).toHaveCount(0);
   await expect(page.getByText(/run privately and are not part of this site/)).toBeVisible();
   // Private paths just show the public homepage: there is nothing else here.
-  await page.goto("/caregiver/login");
+  await page.goto("./caregiver/login");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Every familiar face");
   await expect(page.getByLabel("Password")).toHaveCount(0);
 });
 
 test("fits the screen and passes WCAG 2.2 AA checks", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
   // Let the entrance fades finish (as in e2e/site.spec.ts) before measuring.
   await page.evaluate(() => document.querySelectorAll(".site-reveal").forEach((el) => el.setAttribute("data-visible", "true")));
   await page.waitForTimeout(700);
