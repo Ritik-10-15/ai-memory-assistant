@@ -57,12 +57,21 @@ server is only used when running `python app.py` directly.
 
 ## 3. Public demo
 
-### Static hosting (recommended)
+### GitHub Pages (set up in this repository)
+
+`.github/workflows/pages.yml` builds the demo, runs its browser tests and
+publishes it to `https://<user>.github.io/<repository>/` whenever the
+frontend changes on `main`. Turn it on once: **Settings → Pages → Build and
+deployment → Source: GitHub Actions**, then run the workflow from the
+Actions tab (or push to `main`). Only the static demo is published.
+
+### Any other static host
 
 ```bash
 cd frontend
 npm ci
 npm run build:demo        # → frontend/dist-demo/
+# served from a sub-path?  DEMO_BASE=/my-path/ npm run build:demo
 ```
 
 Upload the contents of `frontend/dist-demo/` to any static host (GitHub
