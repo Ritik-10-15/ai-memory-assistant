@@ -19,8 +19,13 @@ test.describe("patient screen", () => {
     await mockBackend(page, { sequence: [maybeSarah] });
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "This might be Sarah Johnson" })).toBeVisible();
-    await expect(page.getByText(sarah.last_memory!)).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Read aloud" })).toHaveCount(0);
+    // The visitor panel shows none of Sarah's memories. (The separate "A memory
+    // to enjoy" card picks one memory per day of the year, unrelated to who is
+    // in view; on some dates it is Sarah's, so the whole page is not checked.)
+    const visitor = page.locator("#visitor");
+    await expect(visitor).toContainText("This might be Sarah Johnson");
+    await expect(visitor.getByText(sarah.last_memory!)).toHaveCount(0);
+    await expect(visitor.getByRole("button", { name: "Read aloud" })).toHaveCount(0);
     await page.screenshot({ path: `test-results/patient-uncertain-${test.info().project.name}.png`, fullPage: true });
   });
 
