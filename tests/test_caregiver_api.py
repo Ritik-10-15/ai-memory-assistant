@@ -45,7 +45,7 @@ def test_caregiver_api_requires_login_with_json_401(client):
 def test_session_endpoint_reflects_login(client, monkeypatch):
     monkeypatch.setattr(config, "PATIENT_PIN", "2468")
     assert client.get("/api/session").get_json() == {
-        "caregiver": False, "patient": False, "patient_pin_required": True}
+        "sandbox": False, "caregiver": False, "patient": False, "patient_pin_required": True}
     client.post("/api/caregiver/login", json={"password": config.CAREGIVER_PASS})
     data = client.get("/api/session").get_json()
     assert data["caregiver"] is True and data["patient"] is True

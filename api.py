@@ -68,7 +68,12 @@ def _text(form, key, limit=MAX_TEXT):
 @app.route("/api/session")
 def api_session():
     """What the current browser is signed in as. Reveals no data."""
+    if config.SANDBOX_MODE:
+        signed_in = is_caregiver()
+        return jsonify({"sandbox": True, "caregiver": signed_in, "patient": signed_in,
+                        "patient_pin_required": False})
     return jsonify({
+        "sandbox": False,
         "caregiver": is_caregiver(),
         "patient": bool(session.get("patient") or is_caregiver()
                         or not config.PATIENT_PIN),

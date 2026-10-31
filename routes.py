@@ -94,6 +94,16 @@ def readyz():
     }), 200 if ready else 503
 
 
+@app.route("/signin")
+@app.route("/signup")
+def account_pages():
+    """Sandbox sign-in and sign-up (SANDBOX_MODE); the household signs in
+    with the caregiver password instead."""
+    if not config.SANDBOX_MODE:
+        return redirect(url_for("caregiver_login"))
+    return spa()
+
+
 @app.route("/welcome")
 def welcome():
     """Public homepage. Shows only fictional, simulated demo content — no
@@ -104,6 +114,8 @@ def welcome():
 # ── PATIENT ROUTES ────────────────────────────────────────────────────
 @app.route("/patient/login", methods=["GET", "POST"])
 def patient_login():
+    if config.SANDBOX_MODE:
+        return redirect("/signin")
     if not config.PATIENT_PIN:
         return redirect(url_for("index"))
     if request.method == "POST":
@@ -246,6 +258,8 @@ def api_stats():
 # ── CAREGIVER ROUTES ──────────────────────────────────────────────────
 @app.route("/caregiver/login", methods=["GET", "POST"])
 def caregiver_login():
+    if config.SANDBOX_MODE:
+        return redirect("/signin")
     if request.method == "POST":
         if retry_after("caregiver"):
             return redirect(url_for("caregiver_login", error="locked"))
