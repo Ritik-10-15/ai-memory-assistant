@@ -15,6 +15,18 @@ The app has two sides: a calm, view-only **patient screen**, and a
 password-protected **caregiver panel** for enrolling people and managing
 memories.
 
+## Try it
+
+| | Link | What you get |
+|---|---|---|
+| **Quick demo** | [ritik-10-15.github.io/ai-memory-assistant](https://ritik-10-15.github.io/ai-memory-assistant/) | The project overview, an interactive simulation of five recognition situations, and fictional family albums. No sign-up, no camera. |
+| **The real app** | [18.226.170.110](https://18.226.170.110) | Sign up in seconds (username and password, no email) for your own private copy with a fictional family. Explore the caregiver workspace and patient screen, and add your own face to see live recognition with your webcam. Deleted automatically after 7 days. |
+
+Every person in both is fictional and every picture is an illustration. In
+the real app, a face you add stays in your own copy and nobody else can see
+it. The address of the real app is a cloud server's IP address and may
+change if the server is restarted.
+
 ---
 
 ## Demo at a glance
