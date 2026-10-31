@@ -5,6 +5,7 @@ Nothing in here has side effects (no file I/O, no model loading) so it's
 always safe to import from anywhere, including tests.
 """
 import os
+from contextvars import ContextVar
 from pathlib import Path
 
 # DATA_DIR holds everything that must survive a restart (DB, enrolled faces,
@@ -58,6 +59,77 @@ UNKNOWN_GRACE_FRAMES  = 4   # non-matching frames tolerated before dropping a na
 FRAME_STALE_S         = 3.0 # no frames for this long (camera off, tab hidden): forget the identity
 
 CAM_W, CAM_H = 640, 480
+
+# ── Sandbox accounts (public "try it yourself" deployments) ─────────────
+# SANDBOX_MODE=1: visitors sign up for a private, temporary copy of the app
+# (its own database, faces and photos under DATA_DIR/tenants/<id>/) instead
+# of one household sharing a caregiver password and patient PIN.
+SANDBOX_MODE      = os.environ.get("SANDBOX_MODE") == "1"
+SANDBOX_DAYS      = int(os.environ.get("SANDBOX_DAYS", "7"))      # deleted after this
+SANDBOX_MAX       = int(os.environ.get("SANDBOX_MAX", "50"))      # live sandboxes at once
+TENANTS_DIR       = DATA_DIR / "tenants"
+ACCOUNTS_DB       = str(DATA_DIR / "accounts.db")
+
+# Which sandbox the current request (or recognition frame) belongs to:
+# None in the normal single-household mode. Every data path below is read
+# through these functions, so each sandbox only ever sees its own files.
+_tenant = ContextVar("tenant", default=None)
+
+
+def tenant():
+    return _tenant.get()
+
+
+def tenant_root(tenant_id):
+    return TENANTS_DIR / tenant_id
+
+
+def set_tenant(tenant_id):
+    """Make tenant_id current; returns a token for reset_tenant()."""
+    return _tenant.set(tenant_id)
+
+
+def reset_tenant(token):
+    _tenant.reset(token)
+
+
+def in_background(fn, *args):
+    """Run fn(*args) on a daemon thread in the current sandbox (threads do
+    not inherit it on their own)."""
+    import contextvars
+    import threading
+    threading.Thread(target=contextvars.copy_context().run, args=(fn, *args), daemon=True).start()
+
+
+def _root():
+    t = _tenant.get()
+    return tenant_root(t) if t else None
+
+
+def db_path():
+    r = _root()
+    return str(r / "memory_v2.db") if r else DB_PATH
+
+
+def known_faces_dir():
+    r = _root()
+    return r / "known_faces" if r else KNOWN_FACES_DIR
+
+
+def photos_dir():
+    r = _root()
+    return r / "photos" if r else PHOTOS_DIR
+
+
+def uploads_dir():
+    r = _root()
+    return r / "uploads" if r else UPLOADS_DIR
+
+
+def gallery_cache():
+    r = _root()
+    return r / "gallery_cache.npz" if r else GALLERY_CACHE
+
 
 # Build identifier shown by /readyz (the Docker image sets the git commit).
 APP_VERSION = os.environ.get("APP_VERSION", "dev")

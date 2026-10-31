@@ -121,7 +121,7 @@ def _connect(path):
 
 
 def current_version(path=None):
-    conn = sqlite3.connect(path or config.DB_PATH)
+    conn = sqlite3.connect(path or config.db_path())
     try:
         return conn.execute("PRAGMA user_version").fetchone()[0]
     finally:
@@ -141,7 +141,7 @@ def backup(path, version):
 
 
 def upgrade(path=None, target=LATEST, make_backup=True):
-    path = path or config.DB_PATH
+    path = path or config.db_path()
     version = current_version(path)
     if version >= target:
         return version
@@ -165,7 +165,7 @@ def upgrade(path=None, target=LATEST, make_backup=True):
 
 
 def downgrade(path=None, target=0):
-    path = path or config.DB_PATH
+    path = path or config.db_path()
     version = current_version(path)
     conn = _connect(path)
     try:

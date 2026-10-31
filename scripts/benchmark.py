@@ -226,7 +226,7 @@ def _instrument_queue(q):
     def put_nowait(item):
         PIPE["offered"] += 1
         try:
-            return real_put((item[0], item[1], time.perf_counter()))
+            return real_put((item[0], item[1], item[2] if len(item) > 2 else None, time.perf_counter()))
         except queue.Full:            # a plain Queue refuses the newest frame; the producer ignored that
             return None
 
@@ -241,10 +241,10 @@ def _instrument_queue(q):
             raise
         now = time.perf_counter()
         PIPE["wait"].append((now - t0) * 1000)
-        PIPE["age"].append((now - item[2]) * 1000)
+        PIPE["age"].append((now - item[-1]) * 1000)
         PIPE["processed"] += 1
         PIPE["last_return"] = now
-        return item[0], item[1]
+        return item[:-1]
 
     q.put_nowait, q.get = put_nowait, get
 

@@ -9,7 +9,6 @@ query here mirrors one the server-rendered caregiver pages already ran.
 import os
 import re
 import shutil
-import threading
 import uuid
 
 import cv2
@@ -43,7 +42,7 @@ def _too_large(_e):
 
 
 def _reload_gallery():
-    threading.Thread(target=load_known_faces, daemon=True).start()
+    config.in_background(load_known_faces)
 
 
 def _face_dir(pid):
@@ -51,7 +50,7 @@ def _face_dir(pid):
     # id from ever resolving outside known_faces/.
     if not _UUID_RE.match(pid or ""):
         return None
-    return config.KNOWN_FACES_DIR / pid
+    return config.known_faces_dir() / pid
 
 
 def _photo_files(pid):
