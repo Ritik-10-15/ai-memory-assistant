@@ -38,7 +38,15 @@ def spa():
     if not index_file.exists():
         return ("Frontend not built. Run `npm install && npm run build` in "
                 "frontend/, or use `npm run dev` during development.", 503)
-    resp = send_from_directory(config.FRONTEND_DIST, "index.html")
+    if config.SANDBOX_MODE:
+        # Lets the public homepage offer sign-ups without calling the API.
+        mark = '<meta name="memory-assistant-sandbox" content="1" />'
+        html = index_file.read_text(encoding="utf-8")
+        html = html.replace("</head>", mark + "</head>", 1) if "</head>" in html else mark + html
+        resp = make_response(html)
+        resp.mimetype = "text/html"
+    else:
+        resp = send_from_directory(config.FRONTEND_DIST, "index.html")
     resp.headers["Cache-Control"] = "no-cache"
     return resp
 

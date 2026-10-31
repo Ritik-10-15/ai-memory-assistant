@@ -188,3 +188,12 @@ def test_expired_sandboxes_are_deleted_and_signed_out(sandbox):
 def test_account_endpoints_do_not_exist_for_a_household(client):
     assert client.post("/api/account/signup", json={"username": "robin", "password": PASSWORD, "consent": True}).status_code == 404
     assert client.get("/signup").status_code == 302
+
+
+def test_the_page_tells_the_homepage_about_sign_ups_without_an_api_call(sandbox, client):
+    """The public homepage never calls the backend; the server marks the page instead."""
+    assert b'name="memory-assistant-sandbox"' in client.get("/welcome").data
+
+
+def test_a_household_page_carries_no_sandbox_mark(client):
+    assert b"memory-assistant-sandbox" not in client.get("/welcome").data

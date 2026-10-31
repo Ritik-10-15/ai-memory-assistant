@@ -3,6 +3,8 @@ import { DemoAlbums } from "./demo/DemoAlbums";
 import { DemoExperience } from "./demo/DemoExperience";
 import { About, Features, Hero, HowItWorks, SiteFooter } from "./Sections";
 import { SiteNav } from "./SiteNav";
+import { TryItYourself } from "./TryItYourself";
+import { useSiteMode } from "@/lib/siteMode";
 import "./site.css";
 
 /**
@@ -11,6 +13,7 @@ import "./site.css";
  * the camera; the real patient app (/) and caregiver workspace are separate.
  */
 export default function SitePage() {
+  const { sandbox } = useSiteMode();
   useEffect(() => {
     document.title = "Memory Assistant · Every familiar face holds a story";
   }, []);
@@ -30,6 +33,7 @@ export default function SitePage() {
         <Features />
         <DemoExperience />
         <DemoAlbums />
+        {sandbox && <TryItYourself />}
         <About />
       </main>
       <SiteFooter />

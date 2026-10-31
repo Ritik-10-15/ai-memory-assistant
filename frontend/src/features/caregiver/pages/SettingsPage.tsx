@@ -1,10 +1,11 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, KeyRound, LogOut, MonitorSmartphone, ShieldCheck } from "lucide-react";
-import { api } from "@/api/client";
-import { Button, ButtonLink, Card, CardBody, CardHeader, ErrorState, Skeleton } from "@/components/ui";
+import { Download, KeyRound, LogOut, MonitorSmartphone, ShieldCheck, Trash2 } from "lucide-react";
+import { api, ApiError } from "@/api/client";
+import { Button, ButtonLink, Card, CardBody, CardHeader, ConfirmDialog, ErrorState, Skeleton } from "@/components/ui";
 import { useAsync } from "@/hooks/useAsync";
 import { cn } from "@/lib/cn";
+import { formatAccountDate, useSandbox } from "@/lib/sandbox";
 import { PageHeader } from "../components";
 import { usePreferences } from "../preferences";
 
@@ -51,6 +52,65 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint: strin
   );
 }
 
+/** Sandbox deployments: whose sandbox this is, when it goes, and deleting it now. */
+function SandboxCard({ onSignOut }: { onSignOut: () => void }) {
+  const navigate = useNavigate();
+  const { account } = useSandbox();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.deleteAccount();
+      navigate("/welcome", { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't delete your sandbox. Please try again.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="rounded-3xl">
+      <CardHeader title="Your sandbox" description={account ? `Signed in as ${account.username}` : undefined} />
+      <CardBody className="space-y-4">
+        <ul className="space-y-3 text-[15px] text-ink">
+          <li className="flex gap-3">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" aria-hidden="true" />
+            This is your own private copy. Nobody else can see the people, faces, photos or memories in it.
+          </li>
+          <li className="flex gap-3">
+            <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" aria-hidden="true" />
+            {account
+              ? `Everything in it is deleted automatically on ${formatAccountDate(account.expires_at)}.`
+              : "Everything in it is deleted automatically after 7 days."}
+          </li>
+        </ul>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="secondary" icon={<LogOut className="h-4 w-4" aria-hidden="true" />} onClick={onSignOut}>
+            Sign out
+          </Button>
+          <Button variant="danger" icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} onClick={() => setConfirming(true)}>
+            Delete my sandbox now
+          </Button>
+        </div>
+      </CardBody>
+      <ConfirmDialog
+        open={confirming}
+        title="Delete your sandbox?"
+        description="Your account, the people, face photos, memories, albums and visit history in it are deleted for good. This can't be undone."
+        confirmLabel="Delete everything"
+        onConfirm={remove}
+        onCancel={() => setConfirming(false)}
+        busy={busy}
+        error={error}
+      />
+    </Card>
+  );
+}
+
 /**
  * Settings that the app actually has. Passwords, the patient PIN and
  * feature switches come from server environment variables, so they are
@@ -63,6 +123,11 @@ export function SettingsPage() {
   const [prefs, setPrefs] = usePreferences();
 
   async function signOut() {
+    if (session.data?.sandbox) {
+      await api.accountLogout().catch(() => undefined);
+      navigate("/signin", { replace: true });
+      return;
+    }
     await api.caregiverLogout().catch(() => undefined);
     navigate("/caregiver/login", { replace: true });
   }
@@ -90,26 +155,30 @@ export function SettingsPage() {
             </CardBody>
           </Card>
 
-          <Card className="rounded-3xl">
-            <CardHeader title="Account and security" />
-            <CardBody className="space-y-4">
-              <ul className="space-y-3 text-[15px] text-ink">
-                <li className="flex gap-3">
-                  <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" aria-hidden="true" />
-                  The caregiver password is set by whoever runs the server (the CAREGIVER_PASSWORD setting). To change it, update
-                  that setting and restart the app.
-                </li>
-                <li className="flex gap-3">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" aria-hidden="true" />
-                  Your sign-in ends when you sign out or close the browser, and after 12 hours at most. After five wrong passwords, sign-in pauses for five minutes.
-                </li>
-              </ul>
-              <Button variant="secondary" icon={<LogOut className="h-4 w-4" aria-hidden="true" />} onClick={signOut}>
-                Sign out
-              </Button>
-            </CardBody>
-          </Card>
+          {session.data?.sandbox ? (
+            <SandboxCard onSignOut={signOut} />
+          ) : (
+            <Card className="rounded-3xl">
+              <CardHeader title="Account and security" />
+              <CardBody className="space-y-4">
+                <ul className="space-y-3 text-[15px] text-ink">
+                  <li className="flex gap-3">
+                    <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" aria-hidden="true" />
+                    The caregiver password is set by whoever runs the server (the CAREGIVER_PASSWORD setting). To change it, update
+                    that setting and restart the app.
+                  </li>
+                  <li className="flex gap-3">
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" aria-hidden="true" />
+                    Your sign-in ends when you sign out or close the browser, and after 12 hours at most. After five wrong passwords, sign-in pauses for five minutes.
+                  </li>
+                </ul>
+                <Button variant="secondary" icon={<LogOut className="h-4 w-4" aria-hidden="true" />} onClick={signOut}>
+                  Sign out
+                </Button>
+              </CardBody>
+            </Card>
 
+          )}
           <Card className="rounded-3xl">
             <CardHeader title="Patient screen" />
             <CardBody className="space-y-3">

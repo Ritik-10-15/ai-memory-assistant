@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CodeXml, HeartHandshake, LogIn, Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { PUBLIC_DEMO } from "@/lib/publicDemo";
+import { useSiteMode } from "@/lib/siteMode";
 import { PillAnchor } from "./ui";
 
 export const REPO_URL = "https://github.com/Ritik-10-15/ai-memory-assistant";
@@ -56,6 +57,7 @@ export function Brand({ light = false }: { light?: boolean }) {
 }
 
 export function SiteNav() {
+  const { sandbox } = useSiteMode();
   const ids = SECTIONS.map((s) => s.id);
   const active = useActiveSection([...ids, "demo"]);
   const [open, setOpen] = useState(false);
@@ -124,11 +126,11 @@ export function SiteNav() {
             </a>
           ) : (
             <Link
-              to="/caregiver/login"
+              to={sandbox ? "/signin" : "/caregiver/login"}
               className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[15px] font-semibold text-forest hover:bg-mint-100"
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
-              Caregiver login
+              {sandbox ? "Sign in" : "Caregiver login"}
             </Link>
           )}
           <PillAnchor href="#demo" aria-current={active === "demo" ? "location" : undefined}>
@@ -184,11 +186,11 @@ export function SiteNav() {
               </a>
             ) : (
               <Link
-                to="/caregiver/login"
+                to={sandbox ? "/signin" : "/caregiver/login"}
                 className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-forest/30 font-semibold text-forest hover:border-forest"
               >
                 <LogIn className="h-4 w-4" aria-hidden="true" />
-                Caregiver login
+                {sandbox ? "Sign in" : "Caregiver login"}
               </Link>
             )}
           </div>
